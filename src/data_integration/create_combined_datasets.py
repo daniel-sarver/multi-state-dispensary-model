@@ -96,30 +96,49 @@ class MultiStateCombinedProcessor:
             raise
 
     def filter_cannabis_only(self, placer_df, state_code):
-        """Filter Placer data to cannabis dispensaries only, removing hemp/CBD stores."""
+        """Filter Placer data to cannabis dispensaries only, removing hemp/CBD stores.
+
+        Uses a whitelist approach for known cannabis chains plus category-based filtering
+        to avoid excluding real dispensaries like Surterra Wellness or Ayr Wellness.
+        """
         logger.info(f"🧹 Filtering {state_code} Placer data for cannabis dispensaries only...")
 
         initial_count = len(placer_df)
 
-        # Primary filtering criteria
+        # Primary filtering: Placer category must be cannabis
         cannabis_criteria = (
             (placer_df['Sub Category'] == 'Marijuana Dispensary') &
             (placer_df['Category'] == 'Medical & Recreational Cannabis Dispensaries')
         )
 
-        # Additional name-based filtering to catch edge cases
-        hemp_cbd_keywords = [
-            'hemp', 'cbd', 'kratom', 'smoke shop', 'tobacco', 'vape shop',
-            'wellness', 'nutrition', 'supplement'
+        # Known cannabis chains that might have misleading names (whitelist)
+        cannabis_chains = [
+            'trulieve', 'curaleaf', 'surterra', 'muv', 'vidacann', 'liberty',
+            'fluent', 'growhealthy', 'rise', 'ayr', 'restore wellness',
+            'sanctuary', 'cookies', 'insa', 'green dragon', 'jungle boys',
+            'cannabist', 'columbia care'
         ]
 
-        # Check business names for hemp/CBD indicators
-        name_filter = ~placer_df['Property Name'].str.lower().str.contains(
-            '|'.join(hemp_cbd_keywords), na=False
+        # Check if name contains known cannabis brand
+        is_known_cannabis = placer_df['Property Name'].str.lower().str.contains(
+            '|'.join(cannabis_chains), na=False
         )
 
-        # Combine filters
-        cannabis_only = placer_df[cannabis_criteria & name_filter].copy()
+        # Hemp/CBD exclusion keywords (only apply if NOT a known cannabis brand)
+        hemp_cbd_keywords = [
+            r'\bhemp\b', r'\bcbd\b', r'\bkratom\b', 'smoke shop', 'tobacco',
+            'vape shop', 'head shop'
+        ]
+
+        # Flag potential hemp/CBD stores
+        potential_hemp_cbd = placer_df['Property Name'].str.lower().str.contains(
+            '|'.join(hemp_cbd_keywords), na=False, regex=True
+        )
+
+        # Keep if: (cannabis category AND (known cannabis brand OR not hemp/CBD flagged))
+        cannabis_only = placer_df[
+            cannabis_criteria & (is_known_cannabis | ~potential_hemp_cbd)
+        ].copy()
 
         filtered_count = initial_count - len(cannabis_only)
         logger.info(f"✅ {state_code} filtering complete:")
@@ -165,12 +184,47 @@ class MultiStateCombinedProcessor:
 
         return addr
 
+    def calculate_match_score(self, placer_row, reg_row, address_col):
+        """Calculate comprehensive match score including address, city, and ZIP."""
+        placer_addr = placer_row['address_std']
+        reg_addr = reg_row['address_std']
+
+        # Address similarity (most important)
+        addr_score = fuzz.ratio(placer_addr, reg_addr)
+
+        # City similarity
+        placer_city = str(placer_row['City']).upper().strip()
+        reg_city_col = 'CITY' if 'CITY' in reg_row else 'City'
+        reg_city = str(reg_row[reg_city_col]).upper().strip()
+        city_score = fuzz.ratio(placer_city, reg_city)
+
+        # ZIP similarity (exact match or close)
+        placer_zip = str(placer_row['Zip Code']).strip()[:5]
+        reg_zip_col = 'ZIP CODE' if 'ZIP CODE' in reg_row else 'Zip Code'
+        reg_zip = str(reg_row[reg_zip_col]).strip()[:5]
+        zip_match = 100 if placer_zip == reg_zip else 0
+
+        # Weighted composite score: 60% address, 25% city, 15% ZIP
+        composite_score = (addr_score * 0.60) + (city_score * 0.25) + (zip_match * 0.15)
+
+        return {
+            'composite': composite_score,
+            'address': addr_score,
+            'city': city_score,
+            'zip': zip_match
+        }
+
     def match_placer_to_regulator(self, placer_df, regulator_df, state_code):
-        """Match Placer data to regulator data using address-based matching."""
+        """Match Placer data to regulator data using enhanced address+city+ZIP matching.
+
+        Uses composite scoring and allows multiple regulator candidates to avoid
+        incorrectly dropping regulator records on first match.
+        """
         logger.info(f"🔗 Matching {state_code} Placer data to regulator records...")
 
         matches = []
         unmatched_placer = []
+        matched_regulator_indices = set()
 
         # Standardize addresses for matching
         placer_df['address_std'] = placer_df['Address'].apply(self.standardize_address)
@@ -182,48 +236,76 @@ class MultiStateCombinedProcessor:
             address_col = 'Address'
         else:
             logger.error(f"❌ No address column found in {state_code} regulator data")
-            return pd.DataFrame(), placer_df.copy()
+            return pd.DataFrame(), placer_df.copy(), regulator_df
 
         regulator_df['address_std'] = regulator_df[address_col].apply(self.standardize_address)
 
+        # Create working copy to preserve original
+        working_regulator_df = regulator_df.copy()
+
         for idx, placer_row in placer_df.iterrows():
             best_match = None
-            best_score = 0
+            best_scores = None
+            best_composite = 0
 
             placer_addr = placer_row['address_std']
             if not placer_addr:
+                unmatched_placer.append(placer_row)
                 continue
 
-            # Try exact match first
-            exact_matches = regulator_df[regulator_df['address_std'] == placer_addr]
+            # Try exact address match first (quick path)
+            exact_matches = working_regulator_df[
+                (working_regulator_df['address_std'] == placer_addr) &
+                (~working_regulator_df.index.isin(matched_regulator_indices))
+            ]
+
             if len(exact_matches) > 0:
-                best_match = exact_matches.iloc[0]
-                best_score = 100
+                # If multiple exact matches, use city/ZIP to disambiguate
+                for reg_idx, reg_row in exact_matches.iterrows():
+                    scores = self.calculate_match_score(placer_row, reg_row, address_col)
+                    if scores['composite'] > best_composite:
+                        best_composite = scores['composite']
+                        best_scores = scores
+                        best_match = (reg_idx, reg_row)
             else:
-                # Fuzzy matching
-                for reg_idx, reg_row in regulator_df.iterrows():
-                    reg_addr = reg_row['address_std']
-                    if reg_addr:
-                        score = fuzz.ratio(placer_addr, reg_addr)
-                        if score > best_score and score >= 85:  # High threshold for address matching
-                            best_match = reg_row
-                            best_score = score
+                # Fuzzy matching with composite scoring
+                for reg_idx, reg_row in working_regulator_df.iterrows():
+                    if reg_idx in matched_regulator_indices:
+                        continue
+
+                    scores = self.calculate_match_score(placer_row, reg_row, address_col)
+
+                    # Require minimum thresholds
+                    if scores['address'] >= 75 and scores['composite'] >= 80:
+                        if scores['composite'] > best_composite:
+                            best_composite = scores['composite']
+                            best_scores = scores
+                            best_match = (reg_idx, reg_row)
 
             if best_match is not None:
+                reg_idx, matched_reg_row = best_match
+
+                # Determine match type
+                if best_scores['address'] == 100 and best_scores['zip'] == 100:
+                    match_type = 'exact'
+                else:
+                    match_type = 'fuzzy'
+
                 # Create matched record
                 matched_record = {
                     'state': state_code,
                     'data_source': 'regulator_with_placer',
                     'has_placer_data': True,
-                    'match_score': best_score,
-                    'match_type': 'exact' if best_score == 100 else 'fuzzy',
+                    'match_score': round(best_composite, 1),
+                    'match_type': match_type,
+                    'match_details': f"addr:{best_scores['address']:.0f}|city:{best_scores['city']:.0f}|zip:{best_scores['zip']:.0f}",
 
                     # Regulator data (source of truth)
-                    'regulator_name': best_match.get('COMPANY', best_match.get('Dispensary name', '')),
-                    'regulator_address': best_match.get(address_col, ''),
-                    'regulator_city': best_match.get('CITY', best_match.get('City', '')),
-                    'regulator_zip': best_match.get('ZIP CODE', best_match.get('Zip Code', '')),
-                    'regulator_county': best_match.get('COUNTY', best_match.get('County', '')),
+                    'regulator_name': matched_reg_row.get('COMPANY', matched_reg_row.get('Dispensary name', '')),
+                    'regulator_address': matched_reg_row.get(address_col, ''),
+                    'regulator_city': matched_reg_row.get('CITY', matched_reg_row.get('City', '')),
+                    'regulator_zip': matched_reg_row.get('ZIP CODE', matched_reg_row.get('Zip Code', '')),
+                    'regulator_county': matched_reg_row.get('COUNTY', matched_reg_row.get('County', '')),
 
                     # Placer data (training features)
                     'placer_name': placer_row['Property Name'],
@@ -240,31 +322,78 @@ class MultiStateCombinedProcessor:
                 }
 
                 # Add PA-specific fields if available
-                if state_code == 'PA' and 'Medical marijuana available beginning:' in best_match:
-                    matched_record['opening_date'] = best_match['Medical marijuana available beginning:']
-                    matched_record['operational_date'] = best_match['Open on:']
-                    matched_record['product_available'] = best_match['Product available as of 10/14/2025:']
+                if state_code == 'PA' and 'Medical marijuana available beginning:' in matched_reg_row:
+                    matched_record['opening_date'] = matched_reg_row['Medical marijuana available beginning:']
+                    matched_record['operational_date'] = matched_reg_row['Open on:']
+                    matched_record['product_available'] = matched_reg_row['Product available as of 10/14/2025:']
 
                 matches.append(matched_record)
-
-                # Remove from regulator df to avoid duplicate matches
-                regulator_df = regulator_df.drop(best_match.name)
+                matched_regulator_indices.add(reg_idx)
             else:
                 unmatched_placer.append(placer_row)
 
         matches_df = pd.DataFrame(matches)
         unmatched_placer_df = pd.DataFrame(unmatched_placer) if unmatched_placer else pd.DataFrame()
 
+        # Return only unmatched regulator records
+        remaining_regulator_df = working_regulator_df[
+            ~working_regulator_df.index.isin(matched_regulator_indices)
+        ]
+
         logger.info(f"✅ {state_code} matching results:")
         logger.info(f"   🎯 Matched: {len(matches_df)} Placer records to regulator data")
-        logger.info(f"   ❓ Unmatched: {len(unmatched_placer_df)} Placer records")
+        logger.info(f"   ❓ Unmatched Placer: {len(unmatched_placer_df)} records")
+        logger.info(f"   📋 Remaining regulator: {len(remaining_regulator_df)} records")
         if len(matches_df) > 0:
             exact_matches = len(matches_df[matches_df['match_type'] == 'exact'])
             fuzzy_matches = len(matches_df[matches_df['match_type'] == 'fuzzy'])
+            avg_score = matches_df['match_score'].mean()
             logger.info(f"   📍 Exact matches: {exact_matches}")
             logger.info(f"   🔍 Fuzzy matches: {fuzzy_matches}")
+            logger.info(f"   📊 Average match score: {avg_score:.1f}")
 
-        return matches_df, unmatched_placer_df, regulator_df
+        return matches_df, unmatched_placer_df, remaining_regulator_df
+
+    def validate_coordinates(self, df, state_code):
+        """Validate that coordinates fall within expected state boundaries."""
+        if len(df) == 0:
+            return df
+
+        logger.info(f"🗺️  Validating {state_code} coordinates...")
+
+        bounds = self.state_bounds[state_code]
+        initial_count = len(df)
+
+        # Filter to records with coordinates
+        has_coords = df[df['latitude'].notna() & df['longitude'].notna()].copy()
+
+        if len(has_coords) == 0:
+            logger.info(f"   ℹ️  No coordinates to validate")
+            return df
+
+        # Check boundaries
+        lat_valid = (has_coords['latitude'] >= bounds['lat_min']) & (has_coords['latitude'] <= bounds['lat_max'])
+        lon_valid = (has_coords['longitude'] >= bounds['lon_min']) & (has_coords['longitude'] <= bounds['lon_max'])
+
+        valid_coords = lat_valid & lon_valid
+        invalid_count = (~valid_coords).sum()
+
+        if invalid_count > 0:
+            logger.warning(f"   ⚠️  Found {invalid_count} records with coordinates outside {state_code} boundaries")
+            invalid_records = has_coords[~valid_coords][['placer_name', 'placer_address', 'latitude', 'longitude']]
+            for idx, row in invalid_records.iterrows():
+                logger.warning(f"      - {row['placer_name']}: ({row['latitude']:.4f}, {row['longitude']:.4f})")
+
+            # Remove invalid coordinates (keep record but clear coordinates)
+            df.loc[has_coords[~valid_coords].index, ['latitude', 'longitude']] = None
+            logger.info(f"   🔧 Cleared {invalid_count} invalid coordinate pairs")
+
+        valid_count = valid_coords.sum()
+        logger.info(f"   ✅ Validated {valid_count} coordinate pairs within {state_code} boundaries")
+        logger.info(f"      Lat: {bounds['lat_min']:.1f} to {bounds['lat_max']:.1f}")
+        logger.info(f"      Lon: {bounds['lon_min']:.1f} to {bounds['lon_max']:.1f}")
+
+        return df
 
     def add_regulator_only_records(self, remaining_regulator_df, state_code):
         """Add regulator-only records (no Placer data) for complete competitive landscape."""
@@ -341,6 +470,9 @@ class MultiStateCombinedProcessor:
         matched_df, unmatched_placer_df, remaining_regulator_df = self.match_placer_to_regulator(
             filtered_placer, regulator_data, state_code
         )
+
+        # Validate coordinates for matched records
+        matched_df = self.validate_coordinates(matched_df, state_code)
 
         # Add regulator-only records
         regulator_only_df = self.add_regulator_only_records(remaining_regulator_df, state_code)

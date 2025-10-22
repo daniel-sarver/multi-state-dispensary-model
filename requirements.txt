@@ -1,0 +1,23 @@
+# Multi-State Dispensary Model - Python Dependencies
+# Install with: pip install -r requirements.txt
+
+# Core data processing
+pandas>=2.1.0,<3.0.0
+numpy>=1.24.0,<2.0.0
+
+# Fuzzy string matching for address matching
+fuzzywuzzy>=0.18.0
+python-Levenshtein>=0.21.0  # Speeds up fuzzywuzzy
+
+# Logging (built-in, but listing for documentation)
+# logging - standard library
+
+# Data validation and testing
+pytest>=7.4.0,<8.0.0
+pytest-cov>=4.1.0,<5.0.0
+
+# Future dependencies for Phase 2+
+# census>=0.8.19  # US Census API
+# scikit-learn>=1.3.0  # Machine learning
+# matplotlib>=3.7.0  # Visualization
+# seaborn>=0.12.0  # Statistical visualization
