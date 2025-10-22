@@ -20,9 +20,9 @@ Phase 1 successfully established the data foundation for the multi-state dispens
 - **Total**: 903 dispensaries with complete Placer data
 
 **State Regulator Data**:
-- Florida: 734 licensed dispensaries (complete list)
-- Pennsylvania: 205 final licenses + 10 Act 63 provisional licenses
-- **Total**: 949 dispensaries in regulatory landscape
+- Florida: 735 licensed dispensaries (complete list)
+- Pennsylvania: 191 final licenses + 11 Act 63 provisional licenses
+- **Total**: 937 dispensaries in regulatory landscape (735 FL + 191 PA + 11 Act 63)
 
 **Validation Data**:
 - 18 Insa stores with actual vs Placer visit comparisons
@@ -116,22 +116,22 @@ Phase 1 successfully established the data foundation for the multi-state dispens
 ### Coverage Analysis
 
 **Visit Data Completeness**:
-- Training set: 100% (643/643 dispensaries)
-- Overall dataset: 68.6% (643/937 dispensaries)
+- Training set: 100% (741/741 dispensaries)
+- Overall dataset: 79.1% (741/937 dispensaries)
 
 **Coordinate Completeness**:
-- Training set: 100% (643/643 dispensaries)
-- Overall dataset: 68.6% (643/937 dispensaries)
+- Training set: 100% (741/741 dispensaries)
+- Overall dataset: 79.1% (741/937 dispensaries)
 
-**Hemp/CBD Filtering**:
-- Florida: 82 stores removed (11.5% of Placer data)
-- Pennsylvania: 30 stores removed (15.9% of Placer data)
-- Total removed: 112 non-cannabis stores
+**Hemp/CBD Filtering** (After Whitelist Enhancement):
+- Florida: 37 stores removed (5.2% of Placer data, down from 11.5%)
+- Pennsylvania: 17 stores removed (9.0% of Placer data, down from 15.9%)
+- Total removed: 54 non-cannabis stores (improved from 112 with whitelist approach)
 
 ### Statistical Overview
 
-**Visit Statistics** (643 training dispensaries):
-- Average: 68,702 visits/year
+**Visit Statistics** (741 training dispensaries):
+- Average: ~68,000 visits/year (estimated from combined data)
 - Median: Not calculated in processing
 - Range: 301 - 475,108 visits/year
 - Excellent distribution for modeling
@@ -234,10 +234,11 @@ Following a comprehensive code review by Codex, several critical improvements we
 
 ### Data Gaps
 
-1. **Placer Coverage**: Only 68.6% of licensed dispensaries have Placer data
+1. **Placer Coverage**: 79.1% of licensed dispensaries have Placer data (741/937)
    - Larger chains better represented
    - Standalone buildings over strip malls
    - Older dispensaries over newer ones
+   - Significant improvement from initial 68.6% through enhanced matching
 
 2. **Opening Dates**: Only available for PA regulator data
    - FL opening dates not included in regulator dataset
@@ -273,7 +274,7 @@ Following a comprehensive code review by Codex, several critical improvements we
 
 ### Objectives
 
-1. **Automated Census Data Collection**: Pull demographics for all 643 training dispensaries
+1. **Automated Census Data Collection**: Pull demographics for all 741 training dispensaries
 2. **Multi-Radius Analysis**: Calculate population within 1mi, 3mi, 5mi, 10mi buffers
 3. **Demographic Profiling**: Age, income, education, population density by census tract
 4. **Feature Engineering**: Create demographic variables for model training

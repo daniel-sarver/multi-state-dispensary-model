@@ -14,22 +14,24 @@ We successfully completed Phase 1 and have a solid data foundation:
 
 **Key Accomplishments:**
 - Created combined datasets for PA & FL using state regulator data as source of truth
-- Integrated fresh Placer data (Oct 2024 - Sep 2025) via address matching
-- **643 training-eligible dispensaries** with complete visit data and coordinates
+- Integrated fresh Placer data (Oct 2024 - Sep 2025) via enhanced address matching
+- **741 training-eligible dispensaries** with complete visit data and coordinates (98.8% of 750 target)
 - **937 total dispensaries** for comprehensive competitive landscape analysis
-- Systematically filtered 112 hemp/CBD stores from both states
+- Systematically filtered 54 hemp/CBD stores using cannabis brand whitelist approach
+- Enhanced matching with composite scoring (address + city + ZIP) achieving 96-98% avg confidence
 - All work committed and pushed to GitHub: https://github.com/daniel-sarver/multi-state-dispensary-model
 
 **Key Files to Review:**
-- `/docs/PHASE1_COMPLETION_REPORT.md` - Complete Phase 1 summary
-- `/docs/DATASET_ANALYSIS.md` - Fresh dataset analysis
-- `/data/processed/FL_combined_dataset_current.csv` - 735 FL dispensaries (511 training-eligible)
-- `/data/processed/PA_combined_dataset_current.csv` - 202 PA dispensaries (132 training-eligible)
-- `/src/data_integration/create_combined_datasets.py` - Data processing tool we built
+- `/docs/PHASE1_COMPLETION_REPORT.md` - Complete Phase 1 summary with code review improvements
+- `/docs/CODE_REVIEW_FIXES.md` - Detailed documentation of enhancements (+98 dispensaries recovered)
+- `/data/processed/FL_combined_dataset_current.csv` - 735 FL dispensaries (590 training-eligible)
+- `/data/processed/PA_combined_dataset_current.csv` - 202 PA dispensaries (151 training-eligible)
+- `/src/data_integration/create_combined_datasets.py` - Enhanced data processing pipeline
+- `/tests/test_data_integration.py` - Comprehensive test suite for regression prevention
 
 ## What's Next: Phase 2 - Census Demographics Integration
 
-**Objective:** Add demographic features to our 643 training-eligible dispensaries to enhance model predictive power.
+**Objective:** Add demographic features to our 741 training-eligible dispensaries to enhance model predictive power.
 
 **Approach:**
 1. **Automated Census Data Collection** using US Census Bureau API (public government data)
@@ -39,7 +41,7 @@ We successfully completed Phase 1 and have a solid data foundation:
 
 **Key Requirements:**
 - Use US Census Bureau API for automated, programmatic data collection (this is acceptable since it's public government data)
-- Pull data for all 643 training-eligible dispensaries (those with `has_placer_data: True`)
+- Pull data for all 741 training-eligible dispensaries (those with `has_placer_data: True`)
 - Census tract-level demographic data based on dispensary coordinates
 - Multiple radius analysis to capture market area demographics
 - Maintain data integrity standards (real data only, comprehensive validation)
@@ -72,8 +74,8 @@ We successfully completed Phase 1 and have a solid data foundation:
 
 ## Next Steps for You
 
-1. **Review Phase 1 completion** - Read `/docs/PHASE1_COMPLETION_REPORT.md`
-2. **Examine combined datasets** - Understand the structure of our 643 training dispensaries
+1. **Review Phase 1 completion** - Read `/docs/PHASE1_COMPLETION_REPORT.md` and `/docs/CODE_REVIEW_FIXES.md`
+2. **Examine combined datasets** - Understand the structure of our 741 training dispensaries
 3. **Plan Census Integration** - Design the census data collection and integration approach
 4. **Build Census Tool** - Create automated script to pull demographics via Census API
 5. **Integrate & Validate** - Add demographic features to combined datasets with quality checks
@@ -81,7 +83,7 @@ We successfully completed Phase 1 and have a solid data foundation:
 ## Questions You Might Have
 
 **Q: Which dispensaries should get census data?**
-A: All 643 dispensaries where `has_placer_data: True` in the combined datasets
+A: All 741 dispensaries where `has_placer_data: True` in the combined datasets
 
 **Q: What census variables do we need?**
 A: Population, age distribution, household income, per capita income, education levels, population density
