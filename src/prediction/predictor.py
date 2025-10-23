@@ -136,8 +136,11 @@ class MultiStatePredictor:
                 f"Missing {len(missing)} required features: {missing[:5]}..."
             )
 
-        # Create feature array in correct order
-        X = np.array([[features_dict[fname] for fname in self.feature_names]])
+        # Create feature DataFrame with proper column names (silences sklearn warning)
+        X = pd.DataFrame(
+            [[features_dict[fname] for fname in self.feature_names]],
+            columns=self.feature_names
+        )
 
         # Generate prediction (Pipeline handles scaling)
         prediction = self.pipeline.predict(X)[0]
@@ -344,8 +347,11 @@ class MultiStatePredictor:
         if not is_valid:
             raise ValueError(f"Missing required features: {missing}")
 
-        # Create feature array
-        X = np.array([[features_dict[fname] for fname in self.feature_names]])
+        # Create feature DataFrame with column names (silences sklearn warning)
+        X = pd.DataFrame(
+            [[features_dict[fname] for fname in self.feature_names]],
+            columns=self.feature_names
+        )
 
         # Get standardized features (Pipeline's scaler)
         scaler = self.pipeline.named_steps['scaler']
@@ -440,8 +446,8 @@ class MultiStatePredictor:
         if missing:
             raise ValueError(f"Missing required features: {sorted(list(missing))}")
 
-        # Create feature matrix in correct order
-        X = features_df[self.feature_names].values
+        # Create feature DataFrame in correct order (keeps column names for sklearn)
+        X = features_df[self.feature_names]
 
         # Generate predictions
         predictions = self.pipeline.predict(X)
