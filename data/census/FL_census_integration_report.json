@@ -1,0 +1,131 @@
+{
+  "generated_at": "2025-10-22T23:28:04.611436",
+  "phase": "Phase 2 - Census Demographics Integration",
+  "validation": {
+    "total_dispensaries": 735,
+    "null_counts": {
+      "census_state_fips": {
+        "count": 725,
+        "percent": 98.6
+      },
+      "census_county_fips": {
+        "count": 725,
+        "percent": 98.6
+      },
+      "census_tract_fips": {
+        "count": 725,
+        "percent": 98.6
+      },
+      "census_geoid": {
+        "count": 725,
+        "percent": 98.6
+      },
+      "census_tract_name": {
+        "count": 725,
+        "percent": 98.6
+      },
+      "total_population": {
+        "count": 735,
+        "percent": 100.0
+      },
+      "median_age": {
+        "count": 735,
+        "percent": 100.0
+      },
+      "median_household_income": {
+        "count": 735,
+        "percent": 100.0
+      },
+      "per_capita_income": {
+        "count": 735,
+        "percent": 100.0
+      },
+      "total_pop_25_plus": {
+        "count": 735,
+        "percent": 100.0
+      },
+      "bachelors_degree": {
+        "count": 735,
+        "percent": 100.0
+      },
+      "masters_degree": {
+        "count": 735,
+        "percent": 100.0
+      },
+      "professional_degree": {
+        "count": 735,
+        "percent": 100.0
+      },
+      "doctorate_degree": {
+        "count": 735,
+        "percent": 100.0
+      },
+      "pop_1mi": {
+        "count": 725,
+        "percent": 98.6
+      },
+      "pop_3mi": {
+        "count": 725,
+        "percent": 98.6
+      },
+      "pop_5mi": {
+        "count": 725,
+        "percent": 98.6
+      },
+      "pop_10mi": {
+        "count": 725,
+        "percent": 98.6
+      },
+      "pop_20mi": {
+        "count": 725,
+        "percent": 98.6
+      },
+      "pct_bachelor_plus": {
+        "count": 735,
+        "percent": 100.0
+      },
+      "population_density": {
+        "count": 735,
+        "percent": 100.0
+      }
+    },
+    "value_ranges": {
+      "pop_1mi": {
+        "min": 1411.9111963296696,
+        "max": 26557.175956658404,
+        "mean": 10921.096404581971,
+        "median": 8983.073200540333
+      },
+      "pop_3mi": {
+        "min": 12785.908089009852,
+        "max": 173799.0214938971,
+        "mean": 77283.4966774802,
+        "median": 55784.218465958154
+      },
+      "pop_5mi": {
+        "min": 24375.637612776944,
+        "max": 409950.5051658028,
+        "mean": 165047.88347000498,
+        "median": 111813.91844623201
+      },
+      "pop_10mi": {
+        "min": 79236.65105993135,
+        "max": 1237735.2278348089,
+        "mean": 426472.82396498893,
+        "median": 221079.5590830534
+      },
+      "pop_20mi": {
+        "min": 308808.0859465456,
+        "max": 3410544.603594122,
+        "mean": 1088452.4579574238,
+        "median": 563947.0103079416
+      }
+    },
+    "population_monotonic": {
+      "total_with_data": 10,
+      "monotonic": 10,
+      "non_monotonic": 0,
+      "pct_monotonic": 100.0,
+      "non_monotonic_indices": []
+    },
+    "census_complete": 
