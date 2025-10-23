@@ -205,7 +205,9 @@ These documents represent early planning and have been superseded by the complet
 **Status**: Core prediction, validation, and terminal interface complete - production ready
 
 **Next Steps**:
-- Validation against Insa actual performance (Priority 1)
+- **Model Improvement** (Priority 1) - Improve R² from 0.19 to 0.30+ via temporal adjustments and brand effects
+  - See [MODEL_IMPROVEMENT_IDEAS.md](MODEL_IMPROVEMENT_IDEAS.md) for detailed roadmap
+- Validation against Insa actual performance (Priority 2)
 - Helper functions for simplified data collection (Future)
 
 ---
@@ -214,11 +216,13 @@ These documents represent early planning and have been superseded by the complet
 
 1. **Start Here**: [CLAUDE.md](../CLAUDE.md) - Project guidelines and principles
 2. **Executive Summary**: [MODEL_PERFORMANCE_EXECUTIVE_SUMMARY.md](MODEL_PERFORMANCE_EXECUTIVE_SUMMARY.md) - **For business stakeholders** - Model capabilities, limitations, and appropriate use cases
-3. **Phase 1**: [PHASE1_COMPLETION_REPORT.md](PHASE1_COMPLETION_REPORT.md) - Data integration results
-4. **Phase 2**: [PHASE2_COMPLETION_REPORT.md](PHASE2_COMPLETION_REPORT.md) - Census demographics integration
-5. **Phase 3**: [PHASE3B_MODEL_TRAINING_COMPLETE.md](PHASE3B_MODEL_TRAINING_COMPLETE.md) - Model training & validation
-6. **Code Reviews**: [CODEX_REVIEW_DOUBLE_SCALING_FIX.md](CODEX_REVIEW_DOUBLE_SCALING_FIX.md) - Critical bug fix (read this!)
-7. **Technical**: [PHASE2_ARCHITECTURE.md](PHASE2_ARCHITECTURE.md) - Census integration architecture
+3. **Next Steps**: [MODEL_IMPROVEMENT_IDEAS.md](MODEL_IMPROVEMENT_IDEAS.md) - **Roadmap to improve model** - Temporal adjustments, brand effects, additional data sources
+4. **Phase 1**: [PHASE1_COMPLETION_REPORT.md](PHASE1_COMPLETION_REPORT.md) - Data integration results
+5. **Phase 2**: [PHASE2_COMPLETION_REPORT.md](PHASE2_COMPLETION_REPORT.md) - Census demographics integration
+6. **Phase 3**: [PHASE3B_MODEL_TRAINING_COMPLETE.md](PHASE3B_MODEL_TRAINING_COMPLETE.md) - Model training & validation
+7. **Phase 4**: [PHASE4_TERMINAL_INTERFACE_COMPLETE.md](PHASE4_TERMINAL_INTERFACE_COMPLETE.md) - Terminal interface & production deployment
+8. **Code Reviews**: [CODEX_REVIEW_DOUBLE_SCALING_FIX.md](CODEX_REVIEW_DOUBLE_SCALING_FIX.md) - Critical bug fix (read this!)
+9. **Technical**: [PHASE2_ARCHITECTURE.md](PHASE2_ARCHITECTURE.md) - Census integration architecture
 
 ---
 
@@ -226,6 +230,10 @@ These documents represent early planning and have been superseded by the complet
 
 | Date | Document | Change |
 |------|----------|--------|
+| 2025-10-23 | MODEL_IMPROVEMENT_IDEAS.md | Created - Comprehensive roadmap to improve R² from 0.19 to 0.30+ |
+| 2025-10-23 | CONTINUATION_PROMPT_MODEL_IMPROVEMENT.md | Created - Quick-start prompt for next session (model improvement phase) |
+| 2025-10-23 | README.md | Updated - Added model improvement roadmap to key documents |
+| 2025-10-23 | docs/README.md | Updated - Added model improvement to next steps and reading order |
 | 2025-10-23 | MODEL_PERFORMANCE_EXECUTIVE_SUMMARY.md | Created - Executive summary for business stakeholders (model capabilities, limitations, use cases) |
 | 2025-10-23 | src/prediction/predictor.py | Fixed - Eliminated sklearn warnings by wrapping arrays in DataFrames with feature names |
 | 2025-10-23 | docs/README.md | Updated - Added executive summary to reading order |

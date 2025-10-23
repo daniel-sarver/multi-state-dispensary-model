@@ -187,12 +187,11 @@ multi-state-dispensary-model/
 See [docs/README.md](docs/README.md) for complete documentation index.
 
 **Key Documents**:
-- [PHASE1_COMPLETION_REPORT.md](docs/PHASE1_COMPLETION_REPORT.md) - Phase 1 data integration summary
-- [CODEX_REVIEW_DOUBLE_SCALING_FIX.md](docs/CODEX_REVIEW_DOUBLE_SCALING_FIX.md) - Critical double-scaling bug fix (Oct 23, 2025)
-- [PHASE2_COMPLETION_REPORT.md](docs/PHASE2_COMPLETION_REPORT.md) - Phase 2 census demographics summary
-- [PHASE3A_COMPETITIVE_FEATURES_COMPLETE.md](docs/PHASE3A_COMPETITIVE_FEATURES_COMPLETE.md) - Phase 3a competitive features engineering
+- [MODEL_PERFORMANCE_EXECUTIVE_SUMMARY.md](docs/MODEL_PERFORMANCE_EXECUTIVE_SUMMARY.md) - **For stakeholders** - Model capabilities, limitations, use cases
+- [MODEL_IMPROVEMENT_IDEAS.md](docs/MODEL_IMPROVEMENT_IDEAS.md) - **Next steps** - Roadmap to improve R² from 0.19 to 0.30+
+- [PHASE4_TERMINAL_INTERFACE_COMPLETE.md](docs/PHASE4_TERMINAL_INTERFACE_COMPLETE.md) - Phase 4 terminal interface completion
 - [PHASE3B_MODEL_TRAINING_COMPLETE.md](docs/PHASE3B_MODEL_TRAINING_COMPLETE.md) - Phase 3b model training & validation (✅ R² = 0.1876)
-- [PHASE2_ARCHITECTURE.md](docs/PHASE2_ARCHITECTURE.md) - Census integration architecture (v1.2)
+- [CODEX_REVIEW_DOUBLE_SCALING_FIX.md](docs/CODEX_REVIEW_DOUBLE_SCALING_FIX.md) - Critical double-scaling bug fix (Oct 23, 2025)
 - [CLAUDE.md](CLAUDE.md) - Project guidelines & principles
 
 ---
