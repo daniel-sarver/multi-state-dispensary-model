@@ -114,17 +114,19 @@ multi-state-dispensary-model/
 - ✅ Demographic interaction features (affluent markets, educated urban areas)
 - **Deliverables**: `combined_with_competitive_features.csv` (78 columns, 937 rows)
 
-### Phase 3b: Model Training & Validation 🚧 NEXT
-- ⏳ Data preparation and feature selection
-- ⏳ Ridge regression with state interactions
-- ⏳ Ensemble methods (RF, XGBoost) if needed
-- ⏳ Geographic cross-validation
-- ⏳ State-specific performance analysis (FL vs PA)
-- **Target**: R² > 0.15 (2x improvement over PA baseline)
+### Phase 3b: Model Training & Validation ✅ COMPLETE
+- ✅ Data preparation and feature selection (44 features)
+- ✅ Ridge regression with state interactions (alpha=1000)
+- ✅ 5-fold cross-validation (R² = 0.1876 ± 0.0645)
+- ✅ Leave-one-state-out validation
+- ✅ State-specific performance analysis (FL vs PA)
+- **Result**: R² = 0.1876 (cross-val), 0.1940 (test) - **2.62x improvement** over baseline
+- **Deliverables**: `multi_state_model_v1.pkl`, performance reports, feature importance analysis
 
-### Phase 4: Interface & Reporting ⏳ PLANNED
+### Phase 4: Interface & Reporting 🚧 NEXT
 - Terminal interface adaptation for multi-state predictions
-- Enhanced reporting system
+- Enhanced reporting system with confidence intervals
+- Validation against Insa actual performance
 - Production deployment
 
 ## Key Achievements
@@ -144,16 +146,26 @@ multi-state-dispensary-model/
 - Mathematically correct area-weighting prevents rural over-counting
 - State-specific Albers projections (EPSG:3086 FL, EPSG:6565 PA)
 
+**Phase 3 Production Results**:
+- ✅ **R² = 0.1876 (cross-validated)** - Target achieved (> 0.15)
+- ✅ **2.62x improvement** over baseline PA model (0.0716 → 0.1876)
+- ✅ **Test set R² = 0.1940** - Robust out-of-sample performance
+- 44 engineered features with state interactions (FL vs PA)
+- Ridge regression (alpha=1000) handles multicollinearity effectively
+- Square footage dominates predictions (+2,945 coefficient)
+- Competition significantly reduces visits (all negative coefficients)
+- Production-ready model artifact (4.20 KB) with scaler and metadata
+
 ## Documentation
 
 See [docs/README.md](docs/README.md) for complete documentation index.
 
 **Key Documents**:
-- [PHASE1_COMPLETION_REPORT.md](docs/PHASE1_COMPLETION_REPORT.md) - Phase 1 summary & results
-- [PHASE2_COMPLETION_REPORT.md](docs/PHASE2_COMPLETION_REPORT.md) - Phase 2 production run summary & results
+- [PHASE1_COMPLETION_REPORT.md](docs/PHASE1_COMPLETION_REPORT.md) - Phase 1 data integration summary
+- [PHASE2_COMPLETION_REPORT.md](docs/PHASE2_COMPLETION_REPORT.md) - Phase 2 census demographics summary
+- [PHASE3A_COMPETITIVE_FEATURES_COMPLETE.md](docs/PHASE3A_COMPETITIVE_FEATURES_COMPLETE.md) - Phase 3a competitive features engineering
+- [PHASE3B_MODEL_TRAINING_COMPLETE.md](docs/PHASE3B_MODEL_TRAINING_COMPLETE.md) - Phase 3b model training & validation (✅ R² = 0.1876)
 - [PHASE2_ARCHITECTURE.md](docs/PHASE2_ARCHITECTURE.md) - Census integration architecture (v1.2)
-- [PHASE2_DATA_QUALITY_NOTES.md](docs/PHASE2_DATA_QUALITY_NOTES.md) - Data quality analysis, ACS suppressions, downstream compatibility
-- [CODEX_REVIEW_PHASE2.md](docs/CODEX_REVIEW_PHASE2.md) - Critical architecture fixes
 - [CLAUDE.md](CLAUDE.md) - Project guidelines & principles
 
 ---
