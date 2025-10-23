@@ -14,7 +14,7 @@ This project enhances the successful PA Dispensary Model (v3.1) by:
 
 ## Quick Start
 
-**Status**: Phase 2 (Census Demographics Integration) - Architecture Complete, Ready for Implementation
+**Status**: Phase 3b (Model Training) - Competitive Features Complete, Ready for Model Development
 
 ```bash
 # Navigate to project directory
@@ -27,11 +27,11 @@ cp .env.example .env
 # Install dependencies
 pip install -r requirements.txt
 
-# Run census data collection (Phase 2)
-python3 src/feature_engineering/collect_census_data.py
+# Verify dataset ready for modeling
+python3 -c "import pandas as pd; df = pd.read_csv('data/processed/combined_with_competitive_features.csv'); print(f'Training dispensaries: {df[df.has_placer_data==True].shape[0]}')"
 
-# Run full analysis (when complete)
-python3 run_multi_state_analysis.py
+# Next: Build Ridge regression model (Phase 3b)
+# Coming soon: python3 src/modeling/train_multi_state_model.py
 ```
 
 ## Model Architecture
@@ -98,27 +98,32 @@ multi-state-dispensary-model/
 - ✅ Enhanced address matching (96-98 avg confidence)
 - ✅ Cannabis-only filtering with brand whitelist
 - ✅ Comprehensive test suite
-- **Deliverables**: `FL_combined_dataset_current.csv`, `PA_combined_dataset_current.csv`
 
 ### Phase 2: Census Demographics Integration ✅ COMPLETE
-- ✅ Architecture complete (v1.2) - production-ready
-- ✅ Area-weighted population calculation implemented
-- ✅ CRS strategy implemented (state-specific Albers projections)
-- ✅ Secure credential management via environment variables
-- ✅ All 5 modules implemented and tested
-- ✅ Production run complete: 741/741 dispensaries, 7,730 unique tracts
-- ✅ Data quality: 99.96% complete (3 tracts with standard ACS suppressions)
-- ✅ Multi-radius populations: 1, 3, 5, 10, 20 miles with area-weighting
-- **Deliverables**: Updated FL/PA datasets with 24+ census columns, comprehensive data quality documentation
+- ✅ 24 census features added (100% coverage)
+- ✅ Multi-radius populations (1, 3, 5, 10, 20 miles)
+- ✅ Demographics (age, income, education, density)
+- ✅ Area-weighted population calculations
+- ✅ 99.96% data completeness (7,730 unique tracts)
 
-### Phase 3: Model Development ⏳ PLANNED
-- Enhanced feature engineering
-- Ridge regression with state interaction terms
-- Cross-validation and performance optimization
-- **Target**: R² > 0.15 (significant improvement over 0.0716 baseline)
+### Phase 3a: Competitive Features Engineering ✅ COMPLETE
+- ✅ 14 competitive features created (100% coverage)
+- ✅ Multi-radius competitor counts (1-20 miles)
+- ✅ Market saturation metrics (dispensaries per 100k)
+- ✅ Distance-weighted competition scores
+- ✅ Demographic interaction features (affluent markets, educated urban areas)
+- **Deliverables**: `combined_with_competitive_features.csv` (78 columns, 937 rows)
+
+### Phase 3b: Model Training & Validation 🚧 NEXT
+- ⏳ Data preparation and feature selection
+- ⏳ Ridge regression with state interactions
+- ⏳ Ensemble methods (RF, XGBoost) if needed
+- ⏳ Geographic cross-validation
+- ⏳ State-specific performance analysis (FL vs PA)
+- **Target**: R² > 0.15 (2x improvement over PA baseline)
 
 ### Phase 4: Interface & Reporting ⏳ PLANNED
-- Terminal interface adaptation
+- Terminal interface adaptation for multi-state predictions
 - Enhanced reporting system
 - Production deployment
 
