@@ -145,6 +145,7 @@ See [docs/README.md](docs/README.md) for complete documentation index.
 
 **Key Documents**:
 - [PHASE1_COMPLETION_REPORT.md](docs/PHASE1_COMPLETION_REPORT.md) - Phase 1 summary & results
+- [PHASE2_COMPLETION_REPORT.md](docs/PHASE2_COMPLETION_REPORT.md) - Phase 2 production run summary & results
 - [PHASE2_ARCHITECTURE.md](docs/PHASE2_ARCHITECTURE.md) - Census integration architecture (v1.2)
 - [PHASE2_DATA_QUALITY_NOTES.md](docs/PHASE2_DATA_QUALITY_NOTES.md) - Data quality analysis, ACS suppressions, downstream compatibility
 - [CODEX_REVIEW_PHASE2.md](docs/CODEX_REVIEW_PHASE2.md) - Critical architecture fixes
