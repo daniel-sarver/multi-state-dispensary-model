@@ -16,8 +16,15 @@ python-Levenshtein>=0.21.0  # Speeds up fuzzywuzzy
 pytest>=7.4.0,<8.0.0
 pytest-cov>=4.1.0,<5.0.0
 
-# Future dependencies for Phase 2+
-# census>=0.8.19  # US Census API
+# Phase 2: Census Demographics Integration
+geopandas>=0.14.0,<1.0.0  # Spatial operations
+shapely>=2.0.0,<3.0.0  # Geometry creation
+pyproj>=3.6.0,<4.0.0  # CRS transformations
+requests>=2.31.0,<3.0.0  # HTTP requests
+pygris>=0.2.0,<1.0.0  # Census tract shapefiles
+python-dotenv>=1.0.0,<2.0.0  # Environment variable management
+
+# Future dependencies for Phase 3+
 # scikit-learn>=1.3.0  # Machine learning
 # matplotlib>=3.7.0  # Visualization
 # seaborn>=0.12.0  # Statistical visualization
