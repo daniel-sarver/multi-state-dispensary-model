@@ -17,6 +17,8 @@ import numpy as np
 from sklearn.linear_model import Ridge, RidgeCV
 from sklearn.model_selection import cross_val_score, cross_validate, KFold, StratifiedKFold
 from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error, mean_absolute_percentage_error
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pickle
@@ -73,7 +75,10 @@ class MultiStateModelTrainer:
 
     def train_ridge_regression(self, alphas=None):
         """
-        Train Ridge regression with cross-validated hyperparameter tuning.
+        Train Ridge regression with Pipeline for proper cross-validation.
+
+        Uses Pipeline([('scaler', StandardScaler()), ('ridge', Ridge())])
+        to prevent data leakage during cross-validation.
 
         Parameters:
         -----------
@@ -82,31 +87,49 @@ class MultiStateModelTrainer:
 
         Returns:
         --------
-        Ridge
-            Trained Ridge regression model
+        Pipeline
+            Trained Pipeline with StandardScaler and Ridge regression
         """
         print("\n" + "="*60)
-        print("STEP 2: RIDGE REGRESSION WITH HYPERPARAMETER TUNING")
+        print("STEP 2: RIDGE REGRESSION WITH PIPELINE (PROPER CV)")
         print("="*60 + "\n")
 
         if alphas is None:
             alphas = [0.01, 0.1, 1, 10, 100, 1000]
 
-        X_train = self.prepared_data['X_train']
+        X_train = self.prepared_data['X_train']  # Unscaled
         y_train = self.prepared_data['y_train']
 
         print(f"Training Ridge regression with {len(alphas)} alpha values: {alphas}")
-        print("Using built-in cross-validation to select best alpha...")
+        print("Using Pipeline with StandardScaler for proper cross-validation...")
 
-        # Use RidgeCV for efficient cross-validated alpha selection
-        ridge_cv = RidgeCV(alphas=alphas, cv=5, scoring='r2')
-        ridge_cv.fit(X_train, y_train)
+        # Create Pipeline to avoid data leakage in CV
+        # Scaler will be fitted separately on each CV fold
+        pipeline = Pipeline([
+            ('scaler', StandardScaler()),
+            ('ridge', Ridge())
+        ])
 
-        self.best_alpha = ridge_cv.alpha_
-        print(f"\nBest alpha selected: {self.best_alpha}")
+        # Test each alpha via CV
+        best_alpha = None
+        best_score = -np.inf
 
-        # Train final model with best alpha
-        self.model = Ridge(alpha=self.best_alpha)
+        for alpha in alphas:
+            pipeline.set_params(ridge__alpha=alpha)
+            scores = cross_val_score(pipeline, X_train, y_train, cv=5, scoring='r2')
+            mean_score = scores.mean()
+            if mean_score > best_score:
+                best_score = mean_score
+                best_alpha = alpha
+
+        self.best_alpha = best_alpha
+        print(f"\nBest alpha selected: {self.best_alpha} (CV R² = {best_score:.4f})")
+
+        # Train final pipeline with best alpha on full training set
+        self.model = Pipeline([
+            ('scaler', StandardScaler()),
+            ('ridge', Ridge(alpha=self.best_alpha))
+        ])
         self.model.fit(X_train, y_train)
 
         # Calculate training set performance
@@ -126,7 +149,9 @@ class MultiStateModelTrainer:
             'train_rmse': float(train_rmse),
             'train_mae': float(train_mae),
             'training_samples': len(X_train),
-            'features': len(X_train.columns)
+            'features': len(X_train.columns),
+            'uses_pipeline': True,
+            'cv_method': 'Proper Pipeline with StandardScaler'
         }
 
         return self.model
@@ -271,14 +296,12 @@ class MultiStateModelTrainer:
         # Make predictions
         y_pred = self.model.predict(X_test)
 
-        # Separate by state - check if is_FL exists in columns
-        if 'is_FL' in X_test.columns:
-            fl_mask = X_test['is_FL'] > 0.5  # Use > 0.5 for scaled values
-            pa_mask = X_test['is_PA'] > 0.5
-        else:
-            # If scaled, need to get original state indicators from indices
-            print("Warning: State indicators not found in test set, skipping state-specific analysis")
-            return {}
+        # Get original state labels from training_df (safer than relying on scaled features)
+        training_df = self.prepared_data['training_df']
+        test_states = training_df.loc[X_test.index, 'state']
+
+        fl_mask = test_states == 'FL'
+        pa_mask = test_states == 'PA'
 
         # Florida metrics
         fl_r2 = r2_score(y_test[fl_mask], y_pred[fl_mask])
@@ -348,23 +371,25 @@ class MultiStateModelTrainer:
         X_train = self.prepared_data['X_train']
         y_train = self.prepared_data['y_train']
 
-        # Check if state indicators exist
-        if 'is_FL' not in X_train.columns:
-            print("Warning: State indicators not found, skipping leave-one-state-out validation")
-            return {}
+        # Get original state labels from training_df
+        training_df = self.prepared_data['training_df']
+        train_states = training_df.loc[X_train.index, 'state']
 
         # Train on FL, test on PA
         print("Training on FL, testing on PA...")
-        fl_train_mask = X_train['is_FL'] > 0.5  # Use > 0.5 for scaled values
-        pa_train_mask = X_train['is_PA'] > 0.5
+        fl_train_mask = train_states == 'FL'
+        pa_train_mask = train_states == 'PA'
 
         X_fl = X_train[fl_train_mask]
         y_fl = y_train[fl_train_mask]
         X_pa = X_train[pa_train_mask]
         y_pa = y_train[pa_train_mask]
 
-        # Train FL-only model
-        model_fl = Ridge(alpha=self.best_alpha)
+        # Train FL-only model with Pipeline
+        model_fl = Pipeline([
+            ('scaler', StandardScaler()),
+            ('ridge', Ridge(alpha=self.best_alpha))
+        ])
         model_fl.fit(X_fl, y_fl)
         pa_pred = model_fl.predict(X_pa)
         fl_to_pa_r2 = r2_score(y_pa, pa_pred)
@@ -373,7 +398,10 @@ class MultiStateModelTrainer:
 
         # Train on PA, test on FL
         print("Training on PA, testing on FL...")
-        model_pa = Ridge(alpha=self.best_alpha)
+        model_pa = Pipeline([
+            ('scaler', StandardScaler()),
+            ('ridge', Ridge(alpha=self.best_alpha))
+        ])
         model_pa.fit(X_pa, y_pa)
         fl_pred = model_pa.predict(X_fl)
         pa_to_fl_r2 = r2_score(y_fl, fl_pred)
@@ -404,6 +432,8 @@ class MultiStateModelTrainer:
         """
         Analyze feature importance from Ridge coefficients.
 
+        Extracts coefficients from the Ridge model inside the Pipeline.
+
         Parameters:
         -----------
         top_n : int
@@ -419,7 +449,8 @@ class MultiStateModelTrainer:
         print("="*60 + "\n")
 
         feature_names = self.prepared_data['feature_names']
-        coefficients = self.model.coef_
+        # Extract coefficients from the Ridge model inside the Pipeline
+        coefficients = self.model.named_steps['ridge'].coef_
 
         # Create DataFrame
         feature_importance = pd.DataFrame({

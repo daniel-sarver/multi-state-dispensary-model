@@ -23,8 +23,11 @@ pyproj>=3.6.0,<4.0.0  # CRS transformations
 requests>=2.31.0,<3.0.0  # HTTP requests
 pygris>=0.2.0,<1.0.0  # Census tract shapefiles
 python-dotenv>=1.0.0,<2.0.0  # Environment variable management
+geopy>=2.4.0,<3.0.0  # Geodesic distance calculations
 
-# Future dependencies for Phase 3+
-# scikit-learn>=1.3.0  # Machine learning
-# matplotlib>=3.7.0  # Visualization
-# seaborn>=0.12.0  # Statistical visualization
+# Phase 3: Machine Learning & Modeling
+scikit-learn>=1.3.0,<2.0.0  # Machine learning models
+statsmodels>=0.14.0,<1.0.0  # Statistical models and VIF analysis
+matplotlib>=3.7.0,<4.0.0  # Visualization
+seaborn>=0.12.0,<1.0.0  # Statistical visualization
+scipy>=1.11.0,<2.0.0  # Scientific computing
