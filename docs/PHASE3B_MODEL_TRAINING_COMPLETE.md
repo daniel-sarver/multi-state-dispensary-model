@@ -1,9 +1,12 @@
 # Phase 3b Completion Report: Model Training & Validation
 
 **Date**: October 23, 2025
+**Last Updated**: October 23, 2025 (Post double-scaling fix)
 **Phase**: Phase 3b - Model Training & Validation (✅ COMPLETE)
 **Previous Phase**: Phase 3a - Competitive Features Engineering
 **Next Phase**: Phase 4 - Terminal Interface & Production Deployment
+
+> **⚠️ IMPORTANT UPDATE (Oct 23, 2025)**: A critical double-scaling bug was discovered and fixed after initial training. The model was re-trained with the correct methodology. All metrics in this report reflect the CORRECTED performance after the fix. See [CODEX_REVIEW_DOUBLE_SCALING_FIX.md](CODEX_REVIEW_DOUBLE_SCALING_FIX.md) for technical details.
 
 ---
 

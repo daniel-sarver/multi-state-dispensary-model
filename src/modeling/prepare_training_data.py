@@ -139,8 +139,12 @@ class DataPreparator:
         self.preparation_report['missing_values'] = missing_report
         self.preparation_report['total_values_imputed'] = int(total_missing)
 
-        # Verify no remaining NaN values
-        remaining_nan = self.training_df[numeric_cols].isna().sum().sum()
+        # Verify no remaining NaN values (excluding 100% null columns)
+        # Filter to only columns that aren't 100% null
+        non_null_cols = [col for col in numeric_cols
+                        if self.training_df[col].notna().sum() > 0]
+
+        remaining_nan = self.training_df[non_null_cols].isna().sum().sum()
         if remaining_nan > 0:
             print(f"\n⚠️  Warning: {remaining_nan} NaN values remain after imputation!")
         else:
@@ -411,16 +415,17 @@ class DataPreparator:
         dict
             Dictionary containing prepared data and metadata:
             {
-                'X_train': Training features (unscaled for CV),
-                'X_test': Test features (scaled if scale=True),
+                'X_train': Training features (unscaled for Pipeline),
+                'X_test': Test features (unscaled for Pipeline),
                 'y_train': Training target,
                 'y_test': Test target,
                 'feature_names': List of feature names,
-                'scaler': Fitted StandardScaler (if scale=True),
+                'scaler': Fitted StandardScaler for reference (if scale=True),
                 'vif_data': VIF analysis results,
                 'preparation_report': Full preparation report,
                 'training_df': Original training dataframe (for state labels)
             }
+            Note: Pipeline will handle scaling internally for both CV and test evaluation
         """
         # Step 1: Load and filter
         self.load_and_filter()
@@ -440,23 +445,26 @@ class DataPreparator:
         # Step 6: Calculate VIF on training data (before scaling)
         vif_data = self.calculate_vif(self.X_train)
 
-        # Step 7: Scale features ONLY for test set evaluation
-        # Training data stays unscaled for proper CV with Pipeline
+        # Step 7: Keep test data unscaled for Pipeline
+        # Both training and test data stay unscaled for proper CV with Pipeline
+        # The Pipeline will handle scaling internally
+        X_train_out = self.X_train.copy()
+        X_test_out = self.X_test.copy()  # Unscaled! Pipeline will scale
+
+        # Fit scaler on training data for metadata/reference only
         if scale:
-            X_train_out = self.X_train.copy()  # Unscaled for CV
-            X_test_scaled, scaler = self.scale_test_only()
-            X_test_out = X_test_scaled
+            scaler = StandardScaler()
+            scaler.fit(self.X_train)
             self.scaler = scaler
         else:
-            X_train_out = self.X_train
-            X_test_out = self.X_test
             self.scaler = None
 
         print("\n" + "="*60)
         print("Data preparation complete!")
-        print(f"Training dispensaries: {len(X_train_out)} (unscaled for proper CV)")
-        print(f"Test dispensaries: {len(X_test_out)} ({'scaled' if scale else 'unscaled'})")
+        print(f"Training dispensaries: {len(X_train_out)} (unscaled for Pipeline)")
+        print(f"Test dispensaries: {len(X_test_out)} (unscaled for Pipeline)")
         print(f"Features: {len(self.feature_names)}")
+        print(f"Note: Pipeline will handle scaling internally")
         print("="*60 + "\n")
 
         return {

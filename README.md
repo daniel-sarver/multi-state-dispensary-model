@@ -162,6 +162,7 @@ See [docs/README.md](docs/README.md) for complete documentation index.
 
 **Key Documents**:
 - [PHASE1_COMPLETION_REPORT.md](docs/PHASE1_COMPLETION_REPORT.md) - Phase 1 data integration summary
+- [CODEX_REVIEW_DOUBLE_SCALING_FIX.md](docs/CODEX_REVIEW_DOUBLE_SCALING_FIX.md) - Critical double-scaling bug fix (Oct 23, 2025)
 - [PHASE2_COMPLETION_REPORT.md](docs/PHASE2_COMPLETION_REPORT.md) - Phase 2 census demographics summary
 - [PHASE3A_COMPETITIVE_FEATURES_COMPLETE.md](docs/PHASE3A_COMPETITIVE_FEATURES_COMPLETE.md) - Phase 3a competitive features engineering
 - [PHASE3B_MODEL_TRAINING_COMPLETE.md](docs/PHASE3B_MODEL_TRAINING_COMPLETE.md) - Phase 3b model training & validation (✅ R² = 0.1876)
