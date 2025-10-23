@@ -305,6 +305,10 @@ def main():
         home_tract_areas = all_tracts_with_demographics[['census_geoid', 'tract_area_sqm']].copy()
         home_tract_areas = home_tract_areas.drop_duplicates(subset='census_geoid')
 
+        # Ensure census_geoid is string type in both dataframes
+        dispensaries_df['census_geoid'] = dispensaries_df['census_geoid'].astype(str)
+        home_tract_areas['census_geoid'] = home_tract_areas['census_geoid'].astype(str)
+
         # Merge tract areas into dispensary data
         dispensaries_df = dispensaries_df.merge(
             home_tract_areas,
