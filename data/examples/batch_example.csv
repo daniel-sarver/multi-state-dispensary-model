@@ -1,0 +1,4 @@
+state,sq_ft,pop_1mi,pop_3mi,pop_5mi,pop_10mi,pop_20mi,competitors_1mi,competitors_3mi,competitors_5mi,competitors_10mi,competitors_20mi,competition_weighted_20mi,total_population,median_age,median_household_income,per_capita_income,total_pop_25_plus,bachelors_degree,masters_degree,professional_degree,doctorate_degree,population_density,tract_area_sqm
+FL,4587,5950,52821,71106,176028,563096,0,2,3,5,13,1.78,4062,29.1,76458,37439,2369,424,125,0,18,890.55,4561619.35
+PA,5200,8500,45000,95000,220000,650000,1,3,5,8,15,2.45,5500,35.2,68000,32000,3800,650,180,25,30,1200.75,4000000.50
+FL,3800,4200,38000,62000,145000,480000,0,1,2,4,10,1.23,3200,27.5,82000,41000,1900,380,95,10,12,720.30,4400000.00
