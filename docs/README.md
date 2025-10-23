@@ -213,11 +213,12 @@ These documents represent early planning and have been superseded by the complet
 ## 📖 Reading Order for New Contributors
 
 1. **Start Here**: [CLAUDE.md](../CLAUDE.md) - Project guidelines and principles
-2. **Phase 1**: [PHASE1_COMPLETION_REPORT.md](PHASE1_COMPLETION_REPORT.md) - Data integration results
-3. **Phase 2**: [PHASE2_COMPLETION_REPORT.md](PHASE2_COMPLETION_REPORT.md) - Census demographics integration
-4. **Phase 3**: [PHASE3B_MODEL_TRAINING_COMPLETE.md](PHASE3B_MODEL_TRAINING_COMPLETE.md) - Model training & validation
-5. **Code Reviews**: [CODEX_REVIEW_DOUBLE_SCALING_FIX.md](CODEX_REVIEW_DOUBLE_SCALING_FIX.md) - Critical bug fix (read this!)
-6. **Technical**: [PHASE2_ARCHITECTURE.md](PHASE2_ARCHITECTURE.md) - Census integration architecture
+2. **Executive Summary**: [MODEL_PERFORMANCE_EXECUTIVE_SUMMARY.md](MODEL_PERFORMANCE_EXECUTIVE_SUMMARY.md) - **For business stakeholders** - Model capabilities, limitations, and appropriate use cases
+3. **Phase 1**: [PHASE1_COMPLETION_REPORT.md](PHASE1_COMPLETION_REPORT.md) - Data integration results
+4. **Phase 2**: [PHASE2_COMPLETION_REPORT.md](PHASE2_COMPLETION_REPORT.md) - Census demographics integration
+5. **Phase 3**: [PHASE3B_MODEL_TRAINING_COMPLETE.md](PHASE3B_MODEL_TRAINING_COMPLETE.md) - Model training & validation
+6. **Code Reviews**: [CODEX_REVIEW_DOUBLE_SCALING_FIX.md](CODEX_REVIEW_DOUBLE_SCALING_FIX.md) - Critical bug fix (read this!)
+7. **Technical**: [PHASE2_ARCHITECTURE.md](PHASE2_ARCHITECTURE.md) - Census integration architecture
 
 ---
 
@@ -225,6 +226,9 @@ These documents represent early planning and have been superseded by the complet
 
 | Date | Document | Change |
 |------|----------|--------|
+| 2025-10-23 | MODEL_PERFORMANCE_EXECUTIVE_SUMMARY.md | Created - Executive summary for business stakeholders (model capabilities, limitations, use cases) |
+| 2025-10-23 | src/prediction/predictor.py | Fixed - Eliminated sklearn warnings by wrapping arrays in DataFrames with feature names |
+| 2025-10-23 | docs/README.md | Updated - Added executive summary to reading order |
 | 2025-10-23 | PHASE4_TERMINAL_INTERFACE_COMPLETE.md | Created - Terminal interface completion report (545 lines) |
 | 2025-10-23 | src/terminal/cli.py | Created - Interactive terminal interface with single-site and batch modes |
 | 2025-10-23 | test_cli.py | Created - CLI test suite with comprehensive testing |
