@@ -322,11 +322,10 @@ src/feature_engineering/
 src/feature_engineering/
 └── data_loader.py (+200 lines) - MODIFIED
     ├── Fixed: dtype={'census_geoid': str} for GEOID loading
-    ├── Added: _add_tract_centroids()
-    ├── Added: _add_approximate_centroids()
-    ├── Added: _save_centroid_cache()
-    ├── Added: _fill_missing_centroids()
-    └── Added: _add_tract_centroids_via_api()
+    ├── Added: _add_tract_centroids() - Loads from Gazetteer files
+    ├── Added: _load_centroids_from_gazetteer() - Parses Census Gazetteer files
+    ├── Added: _save_centroid_cache() - Caches centroids for speed
+    └── Enhanced: All 7,624 tracts now have real per-tract centroids
 ```
 
 ### New Utilities
@@ -416,19 +415,19 @@ Phase 2: Coordinate Calculator (COMPLETE ✅)
 │   └── validate_coordinates() ← State boundary checking
 │
 └── data_loader.py (enhanced)
-    ├── _add_tract_centroids() ← Approx or cached exact
-    ├── _add_approximate_centroids() ← Fast county-level
-    ├── _save_centroid_cache() ← Cache exact centroids
+    ├── _add_tract_centroids() ← Loads from Gazetteer cache
+    ├── _load_centroids_from_gazetteer() ← Parses Census files
+    ├── _save_centroid_cache() ← Cache all 7,624 centroids
     └── Fixed: census_geoid dtype
 
-Phase 3: CLI Integration (NEXT)
-└── Modify src/terminal/cli.py to use calculator
-    ├── Remove 23-input prompts
-    ├── Add 3-4 input prompts (state, lat, lon, sq_ft)
-    └── Call calculate_all_features()
+Phase 3: CLI Integration ✅ COMPLETE
+└── Modified src/terminal/cli.py to use calculator
+    ├── Removed 23-input prompts
+    ├── Added 3-4 input prompts (state, lat, lon, sq_ft)
+    └── Calls calculate_all_features() automatically
 
-Phase 4: Testing & Validation (FUTURE)
-└── Integration tests with known locations
+Phase 4: Testing & Validation ✅ COMPLETE
+└── Integration tests with known locations (Insa Orlando validated)
 ```
 
 ---
@@ -438,7 +437,7 @@ Phase 4: Testing & Validation (FUTURE)
 ### Functional Requirements
 - [x] User inputs only 3-4 values (state, lat, lon, optional sq_ft)
 - [x] System calculates all 23 base features automatically
-- [x] Feature generation completes in < 5 seconds per site (with approximate centroids)
+- [x] Feature generation completes in < 5 seconds per site (using cached Gazetteer centroids)
 - [x] Errors are explicit and informative (no fallbacks)
 - [x] Census tract matching uses official Census API
 
@@ -483,7 +482,7 @@ Phase 4: Testing & Validation (FUTURE)
 
 1. **GEOID Data Types Matter**: Census GEOIDs have leading zeros and must be loaded as strings, not integers. Always specify `dtype={'census_geoid': str}`.
 
-2. **Approximate Centroids Are OK for Testing**: County-level approximations allow immediate testing without API delays. Upgrade to exact centroids before production.
+2. **Real Centroids Are Essential**: Census Gazetteer files provide authoritative per-tract centroids. County-level approximations caused population undercounts at 1-10 mile radii and were replaced with Gazetteer data (see PHASE2_CODEX_FIX_COMPLETE.md).
 
 3. **Centroid Distance ≠ Tract Matching**: Use centroids for population calculations, but use Census API for tract identification. Don't mix these approaches.
 

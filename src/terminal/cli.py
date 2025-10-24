@@ -22,18 +22,26 @@ sys.path.insert(0, str(project_root))
 
 from src.prediction.predictor import MultiStatePredictor
 from src.prediction.feature_validator import FeatureValidator
+from src.feature_engineering.data_loader import MultiStateDataLoader
+from src.feature_engineering.coordinate_calculator import CoordinateFeatureCalculator
+from src.feature_engineering.exceptions import DataNotFoundError, InvalidStateError
 
 
 class TerminalInterface:
     """Interactive CLI for multi-state dispensary predictions."""
 
     def __init__(self):
-        """Initialize predictor and validator."""
-        print("\n🔄 Loading model...")
+        """Initialize predictor, validator, and coordinate calculator."""
+        print("\n🔄 Loading model and data sources...")
         try:
             self.predictor = MultiStatePredictor()
             self.validator = FeatureValidator()
-            print("✅ Model loaded successfully\n")
+
+            # Initialize coordinate calculator for auto-feature generation
+            self.data_loader = MultiStateDataLoader()
+            self.calculator = CoordinateFeatureCalculator(self.data_loader)
+
+            print("✅ Model and data loaded successfully\n")
         except Exception as e:
             print(f"❌ Error loading model: {e}")
             sys.exit(1)
@@ -95,7 +103,7 @@ class TerminalInterface:
                 print("❌ Invalid choice. Please enter 1-4.")
 
     def run_single_site_analysis(self):
-        """Interactive single-site prediction."""
+        """Interactive single-site prediction with automatic feature calculation."""
         print("\n" + "=" * 70)
         print("SINGLE SITE ANALYSIS".center(70))
         print("=" * 70)
@@ -106,16 +114,47 @@ class TerminalInterface:
             return
 
         print(f"\n📍 State: {state}")
-        print("\nEnter site characteristics (23 features required)")
-        print("Type 'cancel' to return to main menu\n")
 
-        # Collect features
-        base_features = self.prompt_base_features(state)
-        if base_features is None:
+        # Get coordinates and optional sq_ft (simplified input)
+        coords = self.prompt_coordinates_only(state)
+        if coords is None:
             print("\n⚠️  Analysis cancelled")
             return
 
-        # Validate and generate features
+        # AUTO-CALCULATE all features from coordinates
+        print("\n🔄 Calculating features from coordinates...")
+        print("  • Identifying census tract")
+        print("  • Calculating multi-radius populations")
+        print("  • Analyzing competition")
+        print("  • Extracting demographics")
+
+        try:
+            base_features = self.calculator.calculate_all_features(
+                state,
+                coords['latitude'],
+                coords['longitude'],
+                coords.get('sq_ft')
+            )
+
+            print("✅ Features calculated successfully")
+            print(f"  • Population (5mi): {base_features['pop_5mi']:,}")
+            print(f"  • Competitors (5mi): {base_features['competitors_5mi']}")
+            print(f"  • Census tract: {base_features.get('census_geoid', 'N/A')}")
+
+        except DataNotFoundError as e:
+            print(f"\n❌ DATA ERROR: {e}")
+            print("  Cannot proceed without required data.")
+            return
+        except InvalidStateError as e:
+            print(f"\n❌ INVALID STATE: {e}")
+            return
+        except Exception as e:
+            print(f"\n❌ CALCULATION ERROR: {e}")
+            import traceback
+            traceback.print_exc()
+            return
+
+        # Validate and generate derived features
         print("\n🔄 Validating inputs and generating derived features...")
         try:
             complete_features = self.validator.prepare_features(
@@ -145,6 +184,8 @@ class TerminalInterface:
 
         except Exception as e:
             print(f"\n❌ Prediction Error: {e}")
+            import traceback
+            traceback.print_exc()
             return
 
     def run_batch_analysis(self):
@@ -285,6 +326,56 @@ class TerminalInterface:
         print("  - Use for directional guidance, not precise forecasts")
         print("  - Always consider confidence intervals for decision-making")
 
+    def parse_coordinates(self, coords_str: str) -> tuple:
+        """
+        Parse coordinate string into lat/lon tuple.
+
+        Accepts formats:
+        - "lat, lon" (decimal degrees)
+        - "lat lon" (space separated)
+
+        Returns:
+            tuple: (latitude, longitude) as floats
+
+        Raises:
+            ValueError: If coordinates cannot be parsed or are out of range
+        """
+        # Remove parentheses if present
+        coords_str = coords_str.replace('(', '').replace(')', '').strip()
+
+        # Try comma-separated first
+        if ',' in coords_str:
+            parts = coords_str.split(',')
+        else:
+            # Try space-separated
+            parts = coords_str.split()
+
+        if len(parts) != 2:
+            raise ValueError(
+                "Invalid coordinate format. Use 'lat, lon' (e.g., '28.5685, -81.2163')"
+            )
+
+        try:
+            lat = float(parts[0].strip())
+            lon = float(parts[1].strip())
+        except ValueError:
+            raise ValueError(
+                "Coordinates must be numbers (e.g., '28.5685, -81.2163')"
+            )
+
+        # Validate ranges
+        if not (-90 <= lat <= 90):
+            raise ValueError(
+                f"Latitude {lat} out of range. Must be between -90 and 90."
+            )
+
+        if not (-180 <= lon <= 180):
+            raise ValueError(
+                f"Longitude {lon} out of range. Must be between -180 and 180."
+            )
+
+        return lat, lon
+
     def prompt_state(self) -> Optional[str]:
         """Prompt user to select FL or PA."""
         print("\nState Selection:")
@@ -302,6 +393,72 @@ class TerminalInterface:
                 return 'PA'
             else:
                 print("❌ Invalid choice. Please enter 1, 2, or 'cancel'.")
+
+    def prompt_coordinates_only(self, state: str) -> Optional[Dict[str, Any]]:
+        """
+        Simplified input: only coordinates and optional sq_ft.
+
+        This method replaces the 23-feature manual input with just 3-4 simple inputs.
+        The coordinate calculator will automatically generate all features.
+
+        Args:
+            state: State code ('FL' or 'PA')
+
+        Returns:
+            dict with 'latitude', 'longitude', and 'sq_ft' (optional)
+            None if user cancels
+        """
+        print("\n--- Site Location ---")
+        print("Enter coordinates in decimal degrees (e.g., 28.5685, -81.2163)")
+        print("Type 'cancel' to return to main menu\n")
+
+        # Get coordinates
+        while True:
+            coords_input = input("> Coordinates (lat, lon): ").strip()
+
+            if coords_input.lower() == 'cancel':
+                return None
+
+            try:
+                lat, lon = self.parse_coordinates(coords_input)
+                break
+            except ValueError as e:
+                print(f"  ❌ {e}")
+
+        # Get square footage (optional)
+        print("\n--- Dispensary Size ---")
+
+        # Use actual state median from calculator (match model behavior exactly)
+        default_sq_ft = self.calculator.STATE_MEDIAN_SQ_FT[state]
+
+        sq_ft_prompt = f"> Square footage (press Enter for {state} median of {default_sq_ft:,} sq ft): "
+
+        while True:
+            sq_ft_input = input(sq_ft_prompt).strip()
+
+            if sq_ft_input.lower() == 'cancel':
+                return None
+
+            # Empty input = use default
+            if not sq_ft_input:
+                sq_ft = None
+                break
+
+            # Try to parse as float
+            try:
+                sq_ft = float(sq_ft_input)
+                if sq_ft <= 0:
+                    print(f"  ❌ Square footage must be positive. Try again or press Enter for default.")
+                    continue
+                break
+            except ValueError:
+                print(f"  ❌ Invalid input. Enter a number (e.g., '4500') or press Enter for default.")
+
+        return {
+            'latitude': lat,
+            'longitude': lon,
+            'sq_ft': sq_ft
+        }
 
     def prompt_base_features(self, state: str) -> Optional[Dict[str, Any]]:
         """Prompt for all 23 base features with validation."""

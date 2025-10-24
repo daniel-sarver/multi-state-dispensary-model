@@ -408,27 +408,21 @@ class CoordinateFeatureCalculator:
         tract = tract_data.iloc[0]
 
         # Extract demographic features
-        # Calculate percentage with bachelor's degree or higher
-        total_25_plus = tract['total_pop_25_plus']
-        if total_25_plus > 0:
-            pct_bachelors = (
-                (tract['bachelors_degree'] +
-                 tract['masters_degree'] +
-                 tract['professional_degree'] +
-                 tract['doctorate_degree']) / total_25_plus * 100
-            )
-        else:
-            pct_bachelors = 0.0
-
+        # Return raw census features as expected by feature_validator
         demographics = {
             'census_geoid': geoid,
             'median_age': float(tract['median_age']),
             'median_household_income': float(tract['median_household_income']),
             'per_capita_income': float(tract['per_capita_income']),
-            'pct_bachelors_or_higher': pct_bachelors,
             'population_density': float(tract['population_density']),
             'tract_area_sqm': float(tract['tract_area_sqm']),
-            'tract_total_population': int(tract['total_population'])
+            # Raw census demographics (as expected by feature_validator)
+            'total_population': int(tract['total_population']),
+            'total_pop_25_plus': int(tract['total_pop_25_plus']),
+            'bachelors_degree': int(tract['bachelors_degree']),
+            'masters_degree': int(tract['masters_degree']),
+            'professional_degree': int(tract['professional_degree']),
+            'doctorate_degree': int(tract['doctorate_degree'])
         }
 
         print(f"    ✓ Demographics extracted")
@@ -512,7 +506,7 @@ class CoordinateFeatureCalculator:
         print(f"  • Median age: {demographics['median_age']:.1f} years")
         print(f"  • Median household income: ${demographics['median_household_income']:,.0f}")
         print(f"  • Per capita income: ${demographics['per_capita_income']:,.0f}")
-        print(f"  • Bachelor's degree or higher: {demographics['pct_bachelors_or_higher']:.1f}%")
+        print(f"  • Total population: {demographics['total_population']:,}")
         print(f"  • Population density: {demographics['population_density']:,.1f} per sq mi")
 
         # Handle square footage
@@ -544,7 +538,7 @@ class CoordinateFeatureCalculator:
             'competitors_10mi': competitors['competitors_10mi'],
             'competitors_20mi': competitors['competitors_20mi'],
 
-            # Normalized competition features (5)
+            # Normalized competition features (5) - NOT required by feature_validator
             'competitors_per_100k_1mi': competitors['competitors_per_100k_1mi'],
             'competitors_per_100k_3mi': competitors['competitors_per_100k_3mi'],
             'competitors_per_100k_5mi': competitors['competitors_per_100k_5mi'],
@@ -554,14 +548,19 @@ class CoordinateFeatureCalculator:
             # Weighted competition feature (1)
             'competition_weighted_20mi': competition_weighted,
 
-            # Demographic features (7)
+            # Demographic features (11) - as required by feature_validator
             'census_geoid': demographics['census_geoid'],
             'median_age': demographics['median_age'],
             'median_household_income': demographics['median_household_income'],
             'per_capita_income': demographics['per_capita_income'],
-            'pct_bachelors_or_higher': demographics['pct_bachelors_or_higher'],
             'population_density': demographics['population_density'],
-            'tract_total_population': demographics['tract_total_population']
+            'tract_area_sqm': demographics['tract_area_sqm'],
+            'total_population': demographics['total_population'],
+            'total_pop_25_plus': demographics['total_pop_25_plus'],
+            'bachelors_degree': demographics['bachelors_degree'],
+            'masters_degree': demographics['masters_degree'],
+            'professional_degree': demographics['professional_degree'],
+            'doctorate_degree': demographics['doctorate_degree']
         }
 
         print(f"\n{'='*70}")
