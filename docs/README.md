@@ -1,8 +1,8 @@
 # Multi-State Dispensary Model - Documentation
 
 **Project**: Multi-State Dispensary Prediction Model (PA & FL)
-**Current Phase**: Phase 3b - Model Training & Validation (Complete, ready for Phase 4)
-**Last Updated**: October 23, 2025
+**Current Phase**: Phase 6 Complete - Model v2 Production Ready ✅
+**Last Updated**: October 24, 2025
 
 ---
 
@@ -280,12 +280,70 @@ These documents represent early planning and have been superseded by the complet
 
 **Status**: Data corrections complete - Ready for model v2 training
 
+---
+
+### Phase 6: Model v2 Training (Complete ✅)
+
+**Completion Reports**:
+- **[PHASE6_MODEL_V2_COMPLETE.md](PHASE6_MODEL_V2_COMPLETE.md)** - Phase 6 complete summary (Git commit: 212865a, fixes: fcd4ca6)
+  - Model v2 trained on corrected, calibrated annual visit data
+  - Cross-validation R² = 0.1812 ± 0.0661 (target ≥0.15 achieved)
+  - Test set R² = 0.1898 (2.53x improvement over baseline)
+  - **45% more accurate predictions** in absolute terms vs v1
+  - Predictions within 20% of Insa actual (vs v1's 45% overestimate)
+  - Data leakage prevented (corrected_visits_step1 excluded)
+  - Proper temporal maturity adjustments (15 FL sites)
+
+**Model Comparison**:
+- **[MODEL_V1_VS_V2_COMPARISON.txt](MODEL_V1_VS_V2_COMPARISON.txt)** - Detailed v1 vs v2 comparison
+  - Statistical performance identical (R² ~0.18)
+  - v1 trained on inflated targets (+45% bias)
+  - v2 trained on corrected, calibrated targets
+  - **Recommendation**: Use v2 exclusively for all predictions
+
+**Pre-Training Documentation**:
+- **[PHASE6_STEPS1-4_SUMMARY.md](PHASE6_STEPS1-4_SUMMARY.md)** - Pre-training preparation summary
+  - Temporal adjustment discrepancy resolved (17→15 sites)
+  - Training scripts updated for model versioning
+  - CLI updated for annual visit display
+  - Documentation corrections completed
+
+**Code Review Fixes**:
+- **[CODEX_REVIEW_PHASE6_FIXES.md](CODEX_REVIEW_PHASE6_FIXES.md)** - Critical pre-training fixes
+  - Data leakage fix (corrected_visits_step1 excluded)
+  - Documentation accuracy (15 temporal adjustments, not 17)
+  - Impact assessment and lessons learned
+
+**Code Updates**:
+- **[src/modeling/train_multi_state_model.py](../src/modeling/train_multi_state_model.py)** - Model versioning support
+  - Added model_version parameter (default='v2')
+  - Auto-selects corrected dataset for v2
+  - Model artifacts auto-versioned
+  - Metadata includes version, target, units
+- **[src/prediction/predictor.py](../src/prediction/predictor.py)** - Updated for v2
+  - Default model path changed to v2
+  - Dynamic improvement factor from metadata (2.53x)
+  - Annual visit labels throughout
+
+**Model Artifacts**:
+- `data/models/multi_state_model_v2.pkl` (5.50 KB) - Production model
+- `data/models/multi_state_model_v2_training_report.json` - Performance metrics
+- `data/models/feature_importance.csv` - Updated coefficients
+
+**Key Insights**:
+- ✅ R² measures *relative* variance, not absolute calibration
+- ✅ v1 and v2 have identical R² but v2 matches business reality
+- ✅ Placer calibration critical for trustworthy predictions
+- ✅ Temporal maturity adjustments prevent over-optimism
+- ✅ Model v2 validated against 7 Insa stores
+
+**Status**: Model v2 production-ready, validated, and deployed
+
 **Next Steps**:
-- **Model v2 Training** (Priority 1) - Retrain using `corrected_visits` as target
-  - Expected: More accurate absolute predictions (aligned with Insa actual)
-  - Potential R² improvement if Placer bias varied systematically
-- Brand effects analysis (Priority 2)
-- Digital footprint features (Priority 3)
+- Validate v2 against remaining 3 Insa FL stores
+- Generate predictions for candidate PA/FL sites
+- Monitor model performance with new Placer data
+- Expand to MA/CT with Insa validation
 
 ---
 
@@ -293,15 +351,16 @@ These documents represent early planning and have been superseded by the complet
 
 1. **Start Here**: [CLAUDE.md](../CLAUDE.md) - Project guidelines and principles
 2. **Executive Summary**: [MODEL_PERFORMANCE_EXECUTIVE_SUMMARY.md](MODEL_PERFORMANCE_EXECUTIVE_SUMMARY.md) - **For business stakeholders** - Model capabilities, limitations, and appropriate use cases
-3. **Current Work**: [PHASE5B_CORRECTIONS_COMPLETE.md](PHASE5B_CORRECTIONS_COMPLETE.md) - **Phase 5b complete** - Placer correction + FL temporal adjustments
-4. **Data Corrections**: [PHASE5_EXPLORATION_COMPLETE.md](PHASE5_EXPLORATION_COMPLETE.md) - **Phase 5a** - Data exploration and correction methodology
-5. **Improvement Roadmap**: [MODEL_IMPROVEMENT_IDEAS.md](MODEL_IMPROVEMENT_IDEAS.md) - **Full strategy** - Temporal, outliers, Placer, brand, digital footprint
-6. **Phase 1**: [PHASE1_COMPLETION_REPORT.md](PHASE1_COMPLETION_REPORT.md) - Data integration results
-7. **Phase 2**: [PHASE2_COMPLETION_REPORT.md](PHASE2_COMPLETION_REPORT.md) - Census demographics integration
-8. **Phase 3**: [PHASE3B_MODEL_TRAINING_COMPLETE.md](PHASE3B_MODEL_TRAINING_COMPLETE.md) - Model training & validation
-9. **Phase 4**: [PHASE4_TERMINAL_INTERFACE_COMPLETE.md](PHASE4_TERMINAL_INTERFACE_COMPLETE.md) - Terminal interface & production deployment
-10. **Code Reviews**: [CODEX_REVIEW_DOUBLE_SCALING_FIX.md](CODEX_REVIEW_DOUBLE_SCALING_FIX.md) - Critical bug fix (read this!)
-11. **Technical**: [PHASE2_ARCHITECTURE.md](PHASE2_ARCHITECTURE.md) - Census integration architecture
+3. **Current Status**: [PHASE6_MODEL_V2_COMPLETE.md](PHASE6_MODEL_V2_COMPLETE.md) - **Phase 6 complete** - Model v2 with corrected data (45% more accurate)
+4. **Model Comparison**: [MODEL_V1_VS_V2_COMPARISON.txt](MODEL_V1_VS_V2_COMPARISON.txt) - **v1 vs v2** - Why v2 is business-ready
+5. **Data Corrections**: [PHASE5B_CORRECTIONS_COMPLETE.md](PHASE5B_CORRECTIONS_COMPLETE.md) - **Phase 5b** - Placer correction + FL temporal adjustments
+6. **Improvement Roadmap**: [MODEL_IMPROVEMENT_IDEAS.md](MODEL_IMPROVEMENT_IDEAS.md) - **Future enhancements** - Brand, digital footprint, additional states
+7. **Phase 1**: [PHASE1_COMPLETION_REPORT.md](PHASE1_COMPLETION_REPORT.md) - Data integration results
+8. **Phase 2**: [PHASE2_COMPLETION_REPORT.md](PHASE2_COMPLETION_REPORT.md) - Census demographics integration
+9. **Phase 3**: [PHASE3B_MODEL_TRAINING_COMPLETE.md](PHASE3B_MODEL_TRAINING_COMPLETE.md) - Model training & validation (v1 baseline)
+10. **Phase 4**: [PHASE4_TERMINAL_INTERFACE_COMPLETE.md](PHASE4_TERMINAL_INTERFACE_COMPLETE.md) - Terminal interface & production deployment
+11. **Code Reviews**: [CODEX_REVIEW_PHASE6_FIXES.md](CODEX_REVIEW_PHASE6_FIXES.md) - Phase 6 pre-training fixes (data leakage)
+12. **Technical**: [PHASE2_ARCHITECTURE.md](PHASE2_ARCHITECTURE.md) - Census integration architecture
 
 ---
 
@@ -309,6 +368,15 @@ These documents represent early planning and have been superseded by the complet
 
 | Date | Document | Change |
 |------|----------|--------|
+| 2025-10-24 | PHASE6_MODEL_V2_COMPLETE.md | Created - Phase 6 complete (model v2 with corrected data, R² = 0.1812, 45% more accurate) |
+| 2025-10-24 | MODEL_V1_VS_V2_COMPARISON.txt | Created - Detailed v1 vs v2 comparison (identical R², different calibration) |
+| 2025-10-24 | PHASE6_STEPS1-4_SUMMARY.md | Created - Pre-training preparation summary (data leakage fix, doc corrections) |
+| 2025-10-24 | CODEX_REVIEW_PHASE6_FIXES.md | Created - Codex review findings and resolutions (critical data leakage fix) |
+| 2025-10-24 | src/prediction/predictor.py | Updated - Changed default model to v2, dynamic improvement factor from metadata (2.53x) |
+| 2025-10-24 | src/modeling/train_multi_state_model.py | Updated - Added model versioning support (v2 auto-selects corrected dataset) |
+| 2025-10-24 | data/models/multi_state_model_v2.pkl | Created - Model v2 trained on corrected data (5.50 KB) |
+| 2025-10-24 | README.md | Updated - Phase 6 complete status, model v2 documentation links |
+| 2025-10-24 | docs/README.md | Updated - Added Phase 6 section with complete documentation |
 | 2025-10-24 | PHASE5B_CORRECTIONS_COMPLETE.md | Created - Phase 5b complete (Placer correction + FL temporal adjustments) |
 | 2025-10-24 | src/modeling/extract_insa_data.py | Created - Insa actual data extraction from KPI CSV (192 lines) |
 | 2025-10-24 | src/modeling/apply_corrections.py | Created - Complete correction workflow (488 lines) |
