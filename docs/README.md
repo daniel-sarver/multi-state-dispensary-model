@@ -206,7 +206,7 @@ These documents represent early planning and have been superseded by the complet
 
 ---
 
-### Phase 5: Model Improvement - Exploration (Complete ✅)
+### Phase 5a: Model Improvement - Exploration (Complete ✅)
 
 **Completion Reports**:
 - **[PHASE5_EXPLORATION_COMPLETE.md](PHASE5_EXPLORATION_COMPLETE.md)** - Phase 5 exploration summary
@@ -240,12 +240,50 @@ These documents represent early planning and have been superseded by the complet
 - ❌ Outlier removal not recommended (all 4 low-traffic sites are legitimate)
 - ✅ **Placer correction is highest-impact opportunity** (+0.03 to +0.08 R²)
 
-**Status**: Exploration complete - Ready for Placer calibration (pending Insa actual data)
+**Status**: Exploration complete
+
+---
+
+### Phase 5b: Data Corrections Implementation (Complete ✅)
+
+**Completion Reports**:
+- **[PHASE5B_CORRECTIONS_COMPLETE.md](PHASE5B_CORRECTIONS_COMPLETE.md)** - Phase 5b complete summary
+  - Placer calibration correction using Insa actual data (7 stores matched)
+  - FL temporal adjustments for 17 sites <12 months operational
+  - Critical finding: Placer data is ANNUAL and overestimates by 45.5%
+  - Created corrected dataset with clear naming convention
+  - Mean visits: 71,066 → 38,935 (-45.2% correction)
+
+**Code Implementation**:
+- **[src/modeling/extract_insa_data.py](../src/modeling/extract_insa_data.py)** - Insa data extraction (192 lines)
+  - Parses complex multi-header KPI CSV structure
+  - Extracts monthly transaction data by store location
+  - Handles duplicate store locations
+- **[src/modeling/apply_corrections.py](../src/modeling/apply_corrections.py)** - Complete correction workflow (488 lines)
+  - Placer calibration correction (factor: 0.5451)
+  - FL temporal adjustments with maturity curve
+  - Clear naming: placer_visits → corrected_visits
+  - Comprehensive logging and validation
+
+**Key Findings**:
+- ✅ **Placer data is ANNUAL visits** (not monthly) - critical discovery
+- ✅ **Placer overestimates by 45.5%** (correction factor: 0.5451)
+- ✅ **17 FL sites needed temporal adjustments** (vs 1 PA site)
+- ✅ **Combined corrections: -45.2% reduction** in mean visits
+
+**Corrected Dataset**:
+- **File**: `data/processed/combined_with_competitive_features_corrected.csv`
+- **Naming Convention**:
+  - `placer_visits`: Original Placer ANNUAL estimates (UNCORRECTED)
+  - `corrected_visits`: ANNUAL visits after corrections (**USE FOR MODELING**)
+  - `corrected_visits_per_sq_ft`: Efficiency metric with corrected data
+
+**Status**: Data corrections complete - Ready for model v2 training
 
 **Next Steps**:
-- **Placer Calibration** (Priority 1) - Obtain Insa actual monthly visits for 8 FL stores
-  - Expected improvement: +0.03 to +0.08 R²
-  - Script ready to run once data provided
+- **Model v2 Training** (Priority 1) - Retrain using `corrected_visits` as target
+  - Expected: More accurate absolute predictions (aligned with Insa actual)
+  - Potential R² improvement if Placer bias varied systematically
 - Brand effects analysis (Priority 2)
 - Digital footprint features (Priority 3)
 
@@ -255,14 +293,15 @@ These documents represent early planning and have been superseded by the complet
 
 1. **Start Here**: [CLAUDE.md](../CLAUDE.md) - Project guidelines and principles
 2. **Executive Summary**: [MODEL_PERFORMANCE_EXECUTIVE_SUMMARY.md](MODEL_PERFORMANCE_EXECUTIVE_SUMMARY.md) - **For business stakeholders** - Model capabilities, limitations, and appropriate use cases
-3. **Current Work**: [PHASE5_EXPLORATION_COMPLETE.md](PHASE5_EXPLORATION_COMPLETE.md) - **Model improvement exploration** - Data analysis, outlier review, Placer correction design
-4. **Improvement Roadmap**: [MODEL_IMPROVEMENT_IDEAS.md](MODEL_IMPROVEMENT_IDEAS.md) - **Full strategy** - Temporal, outliers, Placer, brand, digital footprint
-5. **Phase 1**: [PHASE1_COMPLETION_REPORT.md](PHASE1_COMPLETION_REPORT.md) - Data integration results
-6. **Phase 2**: [PHASE2_COMPLETION_REPORT.md](PHASE2_COMPLETION_REPORT.md) - Census demographics integration
-7. **Phase 3**: [PHASE3B_MODEL_TRAINING_COMPLETE.md](PHASE3B_MODEL_TRAINING_COMPLETE.md) - Model training & validation
-8. **Phase 4**: [PHASE4_TERMINAL_INTERFACE_COMPLETE.md](PHASE4_TERMINAL_INTERFACE_COMPLETE.md) - Terminal interface & production deployment
-9. **Code Reviews**: [CODEX_REVIEW_DOUBLE_SCALING_FIX.md](CODEX_REVIEW_DOUBLE_SCALING_FIX.md) - Critical bug fix (read this!)
-10. **Technical**: [PHASE2_ARCHITECTURE.md](PHASE2_ARCHITECTURE.md) - Census integration architecture
+3. **Current Work**: [PHASE5B_CORRECTIONS_COMPLETE.md](PHASE5B_CORRECTIONS_COMPLETE.md) - **Phase 5b complete** - Placer correction + FL temporal adjustments
+4. **Data Corrections**: [PHASE5_EXPLORATION_COMPLETE.md](PHASE5_EXPLORATION_COMPLETE.md) - **Phase 5a** - Data exploration and correction methodology
+5. **Improvement Roadmap**: [MODEL_IMPROVEMENT_IDEAS.md](MODEL_IMPROVEMENT_IDEAS.md) - **Full strategy** - Temporal, outliers, Placer, brand, digital footprint
+6. **Phase 1**: [PHASE1_COMPLETION_REPORT.md](PHASE1_COMPLETION_REPORT.md) - Data integration results
+7. **Phase 2**: [PHASE2_COMPLETION_REPORT.md](PHASE2_COMPLETION_REPORT.md) - Census demographics integration
+8. **Phase 3**: [PHASE3B_MODEL_TRAINING_COMPLETE.md](PHASE3B_MODEL_TRAINING_COMPLETE.md) - Model training & validation
+9. **Phase 4**: [PHASE4_TERMINAL_INTERFACE_COMPLETE.md](PHASE4_TERMINAL_INTERFACE_COMPLETE.md) - Terminal interface & production deployment
+10. **Code Reviews**: [CODEX_REVIEW_DOUBLE_SCALING_FIX.md](CODEX_REVIEW_DOUBLE_SCALING_FIX.md) - Critical bug fix (read this!)
+11. **Technical**: [PHASE2_ARCHITECTURE.md](PHASE2_ARCHITECTURE.md) - Census integration architecture
 
 ---
 
@@ -270,7 +309,13 @@ These documents represent early planning and have been superseded by the complet
 
 | Date | Document | Change |
 |------|----------|--------|
-| 2025-10-24 | PHASE5_EXPLORATION_COMPLETE.md | Created - Phase 5 exploration summary (temporal, outliers, Placer correction) |
+| 2025-10-24 | PHASE5B_CORRECTIONS_COMPLETE.md | Created - Phase 5b complete (Placer correction + FL temporal adjustments) |
+| 2025-10-24 | src/modeling/extract_insa_data.py | Created - Insa actual data extraction from KPI CSV (192 lines) |
+| 2025-10-24 | src/modeling/apply_corrections.py | Created - Complete correction workflow (488 lines) |
+| 2025-10-24 | combined_with_competitive_features_corrected.csv | Created - Corrected dataset (placer_visits → corrected_visits) |
+| 2025-10-24 | README.md | Updated - Added Phase 5b status and key findings |
+| 2025-10-24 | docs/README.md | Updated - Added Phase 5b section with complete documentation |
+| 2025-10-24 | PHASE5_EXPLORATION_COMPLETE.md | Created - Phase 5a exploration summary (temporal, outliers, Placer correction) |
 | 2025-10-24 | PHASE5_DATA_EXPLORATION_FINDINGS.md | Created - Detailed data exploration findings and statistics |
 | 2025-10-24 | OUTLIER_REVIEW_DECISION.md | Created - Outlier review decisions and rationale (keep all 4 sites) |
 | 2025-10-24 | src/modeling/detect_outliers.py | Created - Outlier detection script (353 lines, multi-method detection) |

@@ -137,15 +137,26 @@ multi-state-dispensary-model/
 - ✅ Batch CSV processing with results export
 - **Deliverables**: `src/prediction/predictor.py` (600+ lines), `src/prediction/feature_validator.py` (600+ lines), `src/terminal/cli.py` (545 lines)
 
-### Phase 5: Model Improvement - Exploration ✅ COMPLETE
+### Phase 5a: Model Improvement - Exploration ✅ COMPLETE
 - ✅ Data exploration and improvement opportunity analysis
-- ✅ Temporal adjustments analysis (not needed - 99% of sites mature)
+- ✅ Temporal adjustments analysis (PA not needed, FL has 17 sites <12 months)
 - ✅ Outlier detection and review (4 sites analyzed, all kept as legitimate)
-- ✅ Placer correction methodology designed (8 Insa stores for calibration)
+- ✅ Placer correction methodology designed (7 Insa stores matched)
 - ✅ Outlier detection script (`detect_outliers.py` - 353 lines)
-- ✅ Placer correction script (`placer_correction.py` - 412 lines)
-- **Deliverables**: Exploration findings, outlier review decisions, correction scripts ready for implementation
-- **Next**: Placer calibration correction (pending Insa actual visit data)
+- **Deliverables**: Exploration findings, outlier review decisions, correction methodology
+
+### Phase 5b: Data Corrections Implementation ✅ COMPLETE
+- ✅ Extracted Insa actual data (10 FL stores, April 2025 monthly transactions)
+- ✅ Discovered Placer data is ANNUAL visits (critical finding)
+- ✅ Calculated Placer correction factor: 0.5451 (overestimates by 45.5%)
+- ✅ Applied Placer correction to all 741 training dispensaries
+- ✅ Parsed FL recent openings (59 dispensaries, Oct 2024 - Oct 2025)
+- ✅ Matched and adjusted 17 FL sites <12 months operational
+- ✅ Created corrected dataset with clear naming convention
+- **Scripts**: `extract_insa_data.py` (192 lines), `apply_corrections.py` (488 lines)
+- **Deliverables**: `combined_with_competitive_features_corrected.csv` (placer_visits → corrected_visits)
+- **Impact**: Mean visits 71,066 → 38,935 (-45.2% correction)
+- **Next**: Retrain model v2 with corrected_visits as target
 
 ## Key Achievements
 
@@ -196,9 +207,10 @@ multi-state-dispensary-model/
 See [docs/README.md](docs/README.md) for complete documentation index.
 
 **Key Documents**:
-- [PHASE5_EXPLORATION_COMPLETE.md](docs/PHASE5_EXPLORATION_COMPLETE.md) - **Phase 5 summary** - Data exploration, outlier review, Placer correction design
+- [PHASE5B_CORRECTIONS_COMPLETE.md](docs/PHASE5B_CORRECTIONS_COMPLETE.md) - **Phase 5b complete** - Placer correction + FL temporal adjustments
+- [PHASE5_EXPLORATION_COMPLETE.md](docs/PHASE5_EXPLORATION_COMPLETE.md) - **Phase 5a summary** - Data exploration, outlier review
 - [MODEL_PERFORMANCE_EXECUTIVE_SUMMARY.md](docs/MODEL_PERFORMANCE_EXECUTIVE_SUMMARY.md) - **For stakeholders** - Model capabilities, limitations, use cases
-- [MODEL_IMPROVEMENT_IDEAS.md](docs/MODEL_IMPROVEMENT_IDEAS.md) - **Roadmap** - Full improvement strategy (temporal, outliers, Placer, brand, digital)
+- [MODEL_IMPROVEMENT_IDEAS.md](docs/MODEL_IMPROVEMENT_IDEAS.md) - **Roadmap** - Full improvement strategy
 - [PHASE4_TERMINAL_INTERFACE_COMPLETE.md](docs/PHASE4_TERMINAL_INTERFACE_COMPLETE.md) - Phase 4 terminal interface completion
 - [PHASE3B_MODEL_TRAINING_COMPLETE.md](docs/PHASE3B_MODEL_TRAINING_COMPLETE.md) - Phase 3b model training & validation (✅ R² = 0.1876)
 - [CLAUDE.md](CLAUDE.md) - Project guidelines & principles
@@ -208,4 +220,4 @@ See [docs/README.md](docs/README.md) for complete documentation index.
 *Building on the foundation of the PA Dispensary Model v3.1 to create the next generation of dispensary site analysis tools.*
 
 **GitHub**: https://github.com/daniel-sarver/multi-state-dispensary-model
-**Last Updated**: October 24, 2025
+**Last Updated**: October 24, 2025 (Phase 5b Complete)
