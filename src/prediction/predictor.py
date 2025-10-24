@@ -31,14 +31,14 @@ class MultiStatePredictor:
     - Feature contribution analysis
     """
 
-    def __init__(self, model_path: str = 'data/models/multi_state_model_v1.pkl'):
+    def __init__(self, model_path: str = 'data/models/multi_state_model_v2.pkl'):
         """
         Initialize predictor and load model artifact.
 
         Parameters
         ----------
         model_path : str
-            Path to pickled model artifact (default: data/models/multi_state_model_v1.pkl)
+            Path to pickled model artifact (default: data/models/multi_state_model_v2.pkl)
         """
         self.model_path = Path(model_path)
         self.pipeline = None
@@ -122,7 +122,7 @@ class MultiStatePredictor:
         Returns
         -------
         float
-            Predicted monthly visits
+            Predicted annual visits
 
         Raises
         ------
@@ -552,7 +552,7 @@ def main():
     print(f"Square Footage: {example_features['sq_ft']:,.0f} sq ft")
     print(f"Population (5mi): {example_features['pop_5mi']:,.0f}")
     print(f"Competitors (5mi): {example_features['competitors_5mi']:.0f}")
-    print(f"Actual Visits: {actual_visits:,.0f} visits/month")
+    print(f"Actual Visits: {actual_visits:,.0f} visits/year")
 
     # Generate prediction
     print("\n" + "="*60)
@@ -563,8 +563,8 @@ def main():
     error = abs(prediction - actual_visits)
     pct_error = (error / actual_visits) * 100
 
-    print(f"Predicted: {prediction:,.0f} visits/month")
-    print(f"Actual: {actual_visits:,.0f} visits/month")
+    print(f"Predicted: {prediction:,.0f} visits/year")
+    print(f"Actual: {actual_visits:,.0f} visits/year")
     print(f"Error: {error:,.0f} visits ({pct_error:.1f}%)")
 
     # Prediction with confidence interval (normal approximation)
@@ -572,7 +572,7 @@ def main():
     print(f"\n95% Confidence Interval (Normal Approximation):")
     print(f"  Method: {result_normal['method']}")
     print(f"  RMSE used: {result_normal['rmse_used']:,.0f} ({result_normal['state']})")
-    print(f"  Range: {result_normal['ci_lower']:,.0f} - {result_normal['ci_upper']:,.0f} visits/month")
+    print(f"  Range: {result_normal['ci_lower']:,.0f} - {result_normal['ci_upper']:,.0f} visits/year")
 
     actual_in_ci_normal = result_normal['ci_lower'] <= actual_visits <= result_normal['ci_upper']
     print(f"  Actual within CI: {'✅ Yes' if actual_in_ci_normal else '❌ No'}")
@@ -583,7 +583,7 @@ def main():
     print(f"  Method: {result_bootstrap['method']}")
     print(f"  Bootstrap iterations: {result_bootstrap['n_bootstrap']}")
     print(f"  RMSE used: {result_bootstrap['rmse_used']:,.0f} ({result_bootstrap['state']})")
-    print(f"  Range: {result_bootstrap['ci_lower']:,.0f} - {result_bootstrap['ci_upper']:,.0f} visits/month")
+    print(f"  Range: {result_bootstrap['ci_lower']:,.0f} - {result_bootstrap['ci_upper']:,.0f} visits/year")
 
     actual_in_ci_bootstrap = result_bootstrap['ci_lower'] <= actual_visits <= result_bootstrap['ci_upper']
     print(f"  Actual within CI: {'✅ Yes' if actual_in_ci_bootstrap else '❌ No'}")

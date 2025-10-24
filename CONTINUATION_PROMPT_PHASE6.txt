@@ -1,0 +1,1 @@
+Let's continue Phase 6: Train model v2 with corrected data. See docs/CONTINUATION_PROMPT_PHASE6_TRAINING.md for context.
