@@ -486,6 +486,17 @@ class MultiStatePredictor:
         """
         training_report = self.model_metadata['training_report']
 
+        # Get improvement factor from metadata (or compute if not available)
+        improvement_factor = training_report.get('metadata', {}).get('improvement_factor', None)
+        if improvement_factor is not None:
+            improvement_str = f"{improvement_factor:.2f}x"
+        else:
+            # Fallback: compute from baseline if metadata missing
+            baseline_r2 = training_report.get('metadata', {}).get('baseline_r2', 0.0716)
+            cv_r2 = training_report['cross_validation']['r2_mean']
+            improvement_factor = cv_r2 / baseline_r2
+            improvement_str = f"{improvement_factor:.2f}x"
+
         return {
             'model_path': str(self.model_path),
             'training_date': self.training_date,
@@ -499,7 +510,7 @@ class MultiStatePredictor:
             'fl_rmse': training_report['state_performance']['florida']['rmse'],
             'pa_r2': training_report['state_performance']['pennsylvania']['r2'],
             'pa_rmse': training_report['state_performance']['pennsylvania']['rmse'],
-            'improvement_over_baseline': '2.62x'
+            'improvement_over_baseline': improvement_str
         }
 
 

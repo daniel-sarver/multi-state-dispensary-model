@@ -2,7 +2,7 @@
 
 **Date**: October 24, 2025
 **Status**: ✅ COMPLETE
-**Git Commit**: TBD (will commit after this doc)
+**Git Commit**: 212865a
 **Model Version**: v2 (corrected, calibrated annual visits)
 
 ---
