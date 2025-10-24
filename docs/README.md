@@ -415,34 +415,36 @@ These documents represent early planning and have been superseded by the complet
 **Code Implementation**:
 - **[src/feature_engineering/coordinate_calculator.py](../src/feature_engineering/coordinate_calculator.py)** - Feature calculator (577 lines)
   - `CoordinateFeatureCalculator` class
-  - `calculate_population_multi_radius()` - Population at all radii
+  - `calculate_population_multi_radius()` - Population at all radii (accurate with Gazetteer)
   - `calculate_competitors_multi_radius()` - Competition counts + normalized
   - `calculate_competition_weighted()` - Distance-weighted score
   - `match_census_tract()` - Census API + demographics extraction
   - `calculate_all_features()` - Master method (3 inputs → 23 features)
   - `validate_coordinates()` - State boundary checking
-- **[src/feature_engineering/data_loader.py](../src/feature_engineering/data_loader.py)** - Enhanced with centroids (+200 lines)
+- **[src/feature_engineering/data_loader.py](../src/feature_engineering/data_loader.py)** - Enhanced with Gazetteer centroids (+200 lines)
   - Fixed: `dtype={'census_geoid': str}` for GEOID loading
-  - `_add_tract_centroids()` - Centroid loading logic
-  - `_add_approximate_centroids()` - Fast county-level approximation
-  - `_save_centroid_cache()` - Cache exact centroids
-  - `_fill_missing_centroids()` - Fill gaps with Census API
-  - `_add_tract_centroids_via_api()` - Fetch all centroids from API
-- **[scripts/fetch_tract_centroids.py](../scripts/fetch_tract_centroids.py)** - Centroid fetcher utility
-  - One-time script to fetch exact centroids (15-20 minutes)
-  - Caches results for future use
-  - Optional enhancement (system works with approximate centroids)
+  - `_add_tract_centroids()` - Loads from Gazetteer files (cached for speed)
+  - `_load_centroids_from_gazetteer()` - Parses FL & PA Gazetteer files
+  - `_save_centroid_cache()` - Caches 7,624 tract centroids
+- **[scripts/download_gazetteer_files.sh](../scripts/download_gazetteer_files.sh)** - Gazetteer download script
+  - Downloads Census Gazetteer files for FL & PA (<1 minute)
+  - Provides authoritative per-tract centroids (7,624 tracts)
 
-**Current Limitation**:
-- Using approximate census tract centroids (county-level) by default
-- Accurate at 20mi radius, undercounted at 1-10mi radii
-- Optional fix: Run `python3 scripts/fetch_tract_centroids.py` for exact centroids
+**Centroid Data Source** ✅:
+- Uses **Census Gazetteer files** with real per-tract centroids
+- 100% geographic coverage (4,983 FL + 2,641 PA tracts)
+- All population radii (1-20mi) accurate
+- Production-ready implementation
 
-**Test Results**:
+**Test Results** (with Gazetteer centroids):
 ```
 Test Case: Insa Orlando, FL
   ✓ Coordinates validated
-  ✓ Population 20mi: 1,440,471
+  ✓ Population 1mi: 14,594 ✅
+  ✓ Population 3mi: 119,652 ✅
+  ✓ Population 5mi: 234,133 ✅
+  ✓ Population 10mi: 691,815 ✅
+  ✓ Population 20mi: 1,796,438 ✅
   ✓ Competition: 2/6/9/21/48 at 1/3/5/10/20 mi
   ✓ Weighted score: 8.4708
   ✓ Census tract matched: 12095016511
@@ -450,7 +452,7 @@ Test Case: Insa Orlando, FL
   ✅ All 23 features generated successfully
 ```
 
-**Key Achievement**: 87% reduction in user inputs (23 → 3-4 inputs)
+**Key Achievement**: 87% reduction in user inputs (23 → 3-4 inputs), all radii accurate
 
 **Status**: Phase 2 complete - Coordinate calculator ready for CLI integration
 

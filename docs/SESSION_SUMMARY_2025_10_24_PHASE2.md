@@ -1,10 +1,20 @@
 # Session Summary - October 24, 2025 (Phase 2)
-## CLI Automation Phase 2 Complete
+## CLI Automation Phase 2 Complete (Updated with Gazetteer Fix)
 
 **Session Date**: October 24, 2025
-**Session Duration**: ~2 hours
+**Session Duration**: ~3 hours (including Codex fix)
 **Project**: Multi-State Dispensary Model - CLI Automation Phase 2
-**Status**: Phase 2 Complete ✅ | Ready for Phase 3
+**Status**: Phase 2 Complete ✅ (with Gazetteer centroids) | Ready for Phase 3
+
+---
+
+## 🔄 **Codex Fix Applied - Critical Centroid Update**
+
+**Issue Identified**: County-level centroid approximations collapsed 7,624 tracts → ~16 coordinates
+**Fix Applied**: Replaced with real per-tract centroids from Census Gazetteer files
+**Impact**: Population calculations now accurate at **ALL radii** (1-20 miles)
+
+See `docs/PHASE2_CODEX_FIX_COMPLETE.md` for full details.
 
 ---
 
@@ -18,7 +28,7 @@
 
 1. **Coordinate Feature Calculator** (`src/feature_engineering/coordinate_calculator.py` - 577 lines)
    - `CoordinateFeatureCalculator` class
-   - `calculate_population_multi_radius()` - Population at 1, 3, 5, 10, 20 mile radii
+   - `calculate_population_multi_radius()` - Population at 1, 3, 5, 10, 20 mile radii (accurate with Gazetteer)
    - `calculate_competitors_multi_radius()` - Competition counts + normalized (10 features)
    - `calculate_competition_weighted()` - Distance-weighted competition score
    - `match_census_tract()` - Census API + demographics extraction (7 features)
@@ -27,16 +37,14 @@
 
 2. **Enhanced Data Loader** (`src/feature_engineering/data_loader.py` - +200 lines)
    - Fixed GEOID loading (`dtype={'census_geoid': str'}` preserves leading zeros)
-   - `_add_tract_centroids()` - Centroid loading logic
-   - `_add_approximate_centroids()` - Fast county-level approximation
-   - `_save_centroid_cache()` - Cache exact centroids
-   - `_fill_missing_centroids()` - Fill gaps with Census API
-   - `_add_tract_centroids_via_api()` - Fetch all centroids from API
+   - `_add_tract_centroids()` - Loads from Gazetteer files (cached for speed)
+   - `_load_centroids_from_gazetteer()` - Parses FL & PA Gazetteer files
+   - `_save_centroid_cache()` - Caches 7,624 tract centroids for fast loading
 
-3. **Centroid Fetcher Utility** (`scripts/fetch_tract_centroids.py`)
-   - One-time script to fetch exact centroids (15-20 minutes)
-   - Caches results for future use
-   - Optional enhancement (system works with approximate centroids)
+3. **Gazetteer Download Script** (`scripts/download_gazetteer_files.sh`)
+   - Downloads Census Gazetteer files for FL & PA
+   - <1 minute download time (~500KB total)
+   - Provides authoritative per-tract centroids
 
 4. **Comprehensive Documentation**
    - `docs/PHASE2_COORDINATE_CALCULATOR_COMPLETE.md` - Complete Phase 2 summary
