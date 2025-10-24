@@ -150,7 +150,7 @@ These documents represent early planning and have been superseded by the complet
 - **Critical Fix**: Double-scaling bug resolved (Oct 23, 2025)
 - **Next Steps**: Phase 4 - Terminal interface & production deployment
 
-### Phase 4: Terminal Interface & Production Deployment (In Progress 🚧)
+### Phase 4: Terminal Interface & Production Deployment (Complete ✅)
 
 **Completion Reports**:
 - **[PHASE4_PREDICTION_MODULE_COMPLETE.md](PHASE4_PREDICTION_MODULE_COMPLETE.md)** - Prediction module completion summary
@@ -204,11 +204,50 @@ These documents represent early planning and have been superseded by the complet
 
 **Status**: Core prediction, validation, and terminal interface complete - production ready
 
+---
+
+### Phase 5: Model Improvement - Exploration (Complete ✅)
+
+**Completion Reports**:
+- **[PHASE5_EXPLORATION_COMPLETE.md](PHASE5_EXPLORATION_COMPLETE.md)** - Phase 5 exploration summary
+  - Data exploration and improvement opportunity analysis
+  - Temporal adjustments analysis (not needed - 99% of sites mature)
+  - Outlier detection and review (4 sites analyzed, all kept as legitimate)
+  - Placer correction methodology designed (8 Insa stores for calibration)
+  - Decision rationale and expected impact analysis
+- **[PHASE5_DATA_EXPLORATION_FINDINGS.md](PHASE5_DATA_EXPLORATION_FINDINGS.md)** - Detailed exploration findings
+  - Visit distribution statistics by state
+  - Top/bottom performer analysis
+  - Revised implementation strategy
+- **[OUTLIER_REVIEW_DECISION.md](OUTLIER_REVIEW_DECISION.md)** - Outlier review decisions
+  - Detailed review of 4 low-traffic FL sites
+  - Decision to keep all (legitimate market dynamics)
+  - Documentation precedent for future reviews
+
+**Code Implementation**:
+- **[src/modeling/detect_outliers.py](../src/modeling/detect_outliers.py)** - Outlier detection script (353 lines)
+  - Multi-method detection (statistical, business logic, residual-based)
+  - Automated flagging and recommendations
+  - CSV export for manual review
+- **[src/modeling/placer_correction.py](../src/modeling/placer_correction.py)** - Placer calibration script (412 lines)
+  - Ready-to-run correction using Insa actual data
+  - Multiple correction methods (simple, state-specific, size-adjusted)
+  - Automated dataset generation
+  - **Status**: Awaiting Insa actual visit data
+
+**Key Findings**:
+- ❌ Temporal adjustments not needed (only 1 of 741 sites < 12 months old)
+- ❌ Outlier removal not recommended (all 4 low-traffic sites are legitimate)
+- ✅ **Placer correction is highest-impact opportunity** (+0.03 to +0.08 R²)
+
+**Status**: Exploration complete - Ready for Placer calibration (pending Insa actual data)
+
 **Next Steps**:
-- **Model Improvement** (Priority 1) - Improve R² from 0.19 to 0.30+ via temporal adjustments and brand effects
-  - See [MODEL_IMPROVEMENT_IDEAS.md](MODEL_IMPROVEMENT_IDEAS.md) for detailed roadmap
-- Validation against Insa actual performance (Priority 2)
-- Helper functions for simplified data collection (Future)
+- **Placer Calibration** (Priority 1) - Obtain Insa actual monthly visits for 8 FL stores
+  - Expected improvement: +0.03 to +0.08 R²
+  - Script ready to run once data provided
+- Brand effects analysis (Priority 2)
+- Digital footprint features (Priority 3)
 
 ---
 
@@ -216,13 +255,14 @@ These documents represent early planning and have been superseded by the complet
 
 1. **Start Here**: [CLAUDE.md](../CLAUDE.md) - Project guidelines and principles
 2. **Executive Summary**: [MODEL_PERFORMANCE_EXECUTIVE_SUMMARY.md](MODEL_PERFORMANCE_EXECUTIVE_SUMMARY.md) - **For business stakeholders** - Model capabilities, limitations, and appropriate use cases
-3. **Next Steps**: [MODEL_IMPROVEMENT_IDEAS.md](MODEL_IMPROVEMENT_IDEAS.md) - **Roadmap to improve model** - Temporal adjustments, brand effects, additional data sources
-4. **Phase 1**: [PHASE1_COMPLETION_REPORT.md](PHASE1_COMPLETION_REPORT.md) - Data integration results
-5. **Phase 2**: [PHASE2_COMPLETION_REPORT.md](PHASE2_COMPLETION_REPORT.md) - Census demographics integration
-6. **Phase 3**: [PHASE3B_MODEL_TRAINING_COMPLETE.md](PHASE3B_MODEL_TRAINING_COMPLETE.md) - Model training & validation
-7. **Phase 4**: [PHASE4_TERMINAL_INTERFACE_COMPLETE.md](PHASE4_TERMINAL_INTERFACE_COMPLETE.md) - Terminal interface & production deployment
-8. **Code Reviews**: [CODEX_REVIEW_DOUBLE_SCALING_FIX.md](CODEX_REVIEW_DOUBLE_SCALING_FIX.md) - Critical bug fix (read this!)
-9. **Technical**: [PHASE2_ARCHITECTURE.md](PHASE2_ARCHITECTURE.md) - Census integration architecture
+3. **Current Work**: [PHASE5_EXPLORATION_COMPLETE.md](PHASE5_EXPLORATION_COMPLETE.md) - **Model improvement exploration** - Data analysis, outlier review, Placer correction design
+4. **Improvement Roadmap**: [MODEL_IMPROVEMENT_IDEAS.md](MODEL_IMPROVEMENT_IDEAS.md) - **Full strategy** - Temporal, outliers, Placer, brand, digital footprint
+5. **Phase 1**: [PHASE1_COMPLETION_REPORT.md](PHASE1_COMPLETION_REPORT.md) - Data integration results
+6. **Phase 2**: [PHASE2_COMPLETION_REPORT.md](PHASE2_COMPLETION_REPORT.md) - Census demographics integration
+7. **Phase 3**: [PHASE3B_MODEL_TRAINING_COMPLETE.md](PHASE3B_MODEL_TRAINING_COMPLETE.md) - Model training & validation
+8. **Phase 4**: [PHASE4_TERMINAL_INTERFACE_COMPLETE.md](PHASE4_TERMINAL_INTERFACE_COMPLETE.md) - Terminal interface & production deployment
+9. **Code Reviews**: [CODEX_REVIEW_DOUBLE_SCALING_FIX.md](CODEX_REVIEW_DOUBLE_SCALING_FIX.md) - Critical bug fix (read this!)
+10. **Technical**: [PHASE2_ARCHITECTURE.md](PHASE2_ARCHITECTURE.md) - Census integration architecture
 
 ---
 
@@ -230,6 +270,14 @@ These documents represent early planning and have been superseded by the complet
 
 | Date | Document | Change |
 |------|----------|--------|
+| 2025-10-24 | PHASE5_EXPLORATION_COMPLETE.md | Created - Phase 5 exploration summary (temporal, outliers, Placer correction) |
+| 2025-10-24 | PHASE5_DATA_EXPLORATION_FINDINGS.md | Created - Detailed data exploration findings and statistics |
+| 2025-10-24 | OUTLIER_REVIEW_DECISION.md | Created - Outlier review decisions and rationale (keep all 4 sites) |
+| 2025-10-24 | src/modeling/detect_outliers.py | Created - Outlier detection script (353 lines, multi-method detection) |
+| 2025-10-24 | src/modeling/placer_correction.py | Created - Placer calibration script (412 lines, ready for Insa data) |
+| 2025-10-24 | MODEL_IMPROVEMENT_IDEAS.md | Updated - Added outlier removal and Placer correction priorities |
+| 2025-10-24 | README.md | Updated - Added Phase 5 status and updated key documents |
+| 2025-10-24 | docs/README.md | Updated - Added Phase 5 section with complete documentation |
 | 2025-10-23 | MODEL_IMPROVEMENT_IDEAS.md | Created - Comprehensive roadmap to improve R² from 0.19 to 0.30+ |
 | 2025-10-23 | CONTINUATION_PROMPT_MODEL_IMPROVEMENT.md | Created - Quick-start prompt for next session (model improvement phase) |
 | 2025-10-23 | README.md | Updated - Added model improvement roadmap to key documents |

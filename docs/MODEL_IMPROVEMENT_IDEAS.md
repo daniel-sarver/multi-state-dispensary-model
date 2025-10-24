@@ -12,11 +12,11 @@ Improve model predictive power, particularly for Pennsylvania, by incorporating 
 
 ---
 
-## Priority 1: Temporal Adjustments for Pennsylvania
+## Priority 1: Temporal Adjustments for Pennsylvania & Florida
 
 ### Problem Statement
 
-**Current Issue**: PA dispensaries have varying operational histories
+**Current Issue**: Dispensaries in both states have varying operational histories
 - Some sites open < 1 year (ramping up)
 - Some sites open 1-3 years (mature)
 - Training data treats all sites equally regardless of operational maturity
@@ -26,6 +26,10 @@ Improve model predictive power, particularly for Pennsylvania, by incorporating 
 - Newer sites have artificially low visit counts (not at steady state)
 - Competition metrics over-weight recently opened competitors
 - Model learns incorrect relationships between features and performance
+
+**Data Availability**:
+- **PA**: Opening dates available from state regulator
+- **FL**: May need to approximate using historical OMMU reports or old spreadsheet comparisons for sites < 1 year
 
 ---
 
@@ -118,7 +122,160 @@ for each dispensary:
 
 ---
 
-## Priority 2: Brand Effects Analysis
+## Priority 2: Outlier Detection and Removal
+
+### Problem Statement
+
+**Current Issue**: Outlier data points may be distorting model training
+- Extremely high/low performing dispensaries for non-replicable reasons
+- Data quality issues (incorrect visit counts, wrong coordinates, etc.)
+- Special circumstances (grand opening promotions, temporary closures, etc.)
+
+**Impact on Model**:
+- Model tries to fit unusual cases at expense of typical performance
+- Coefficients pulled toward extremes
+- Reduced predictive power for normal sites
+
+---
+
+### Proposed Approach
+
+**Step 1: Identify Outliers**
+```python
+# Statistical outlier detection
+from scipy import stats
+
+# 1. Residual-based outliers (after initial model fit)
+residuals = actual_visits - predicted_visits
+z_scores = np.abs(stats.zscore(residuals))
+outliers_statistical = dispensaries[z_scores > 3]  # 3 standard deviations
+
+# 2. Leverage-based outliers (unusual feature combinations)
+# Use Cook's distance or DFBETAS to identify high-leverage points
+
+# 3. Business logic outliers
+outliers_business = dispensaries[
+    (dispensaries['sq_ft'] > 10000) |  # Unusually large
+    (dispensaries['sq_ft'] < 500) |    # Unusually small
+    (dispensaries['monthly_visits'] > 200000) |  # Extremely high traffic
+    (dispensaries['monthly_visits'] < 1000)      # Suspiciously low
+]
+```
+
+**Step 2: Manual Review**
+- Review flagged outliers for data quality issues
+- Check if extreme values are legitimate (e.g., massive flagship store)
+- Document reasons for inclusion/exclusion
+
+**Step 3: Removal Strategy**
+```python
+# Conservative approach: only remove clear data errors
+# Keep legitimate extreme performers (they contain signal)
+
+# Option A: Hard removal
+clean_data = data[~data.index.isin(outlier_indices)]
+
+# Option B: Winsorization (cap extremes at percentile)
+from scipy.stats.mstats import winsorize
+data['monthly_visits_winsorized'] = winsorize(
+    data['monthly_visits'],
+    limits=[0.01, 0.01]  # Cap bottom/top 1%
+)
+```
+
+**Expected Impact**:
+- Improved coefficient stability
+- Better predictions for typical dispensaries
+- Estimated R² improvement: +0.02 to +0.05
+- Reduced prediction error (lower RMSE)
+
+**Risk**:
+- Removing too many points reduces training data
+- May remove legitimate high performers with replicable success factors
+- Requires careful validation
+
+---
+
+## Priority 3: Placer Visit Correction Using Insa Data
+
+### Problem Statement
+
+**Current Issue**: Placer visit estimates may have systematic bias
+- Placer data is modeled from device location pings, not actual counts
+- May systematically over/underestimate across different store types
+- Bias may vary by state, market density, or store characteristics
+
+**Opportunity**: Use Insa actual performance data to calibrate Placer estimates
+
+---
+
+### Proposed Methodology
+
+**Step 1: Calculate Placer Accuracy Ratio for Insa Stores**
+```python
+# For each Insa store with both Placer and actual visit data
+insa_stores = [
+    {'name': 'Insa FL Store 1', 'placer_visits': 45000, 'actual_visits': 52000},
+    {'name': 'Insa FL Store 2', 'placer_visits': 38000, 'actual_visits': 41000},
+    # ... more stores
+]
+
+# Calculate correction factor
+placer_to_actual_ratio = actual_visits / placer_visits
+mean_correction_factor = np.mean([store['actual_visits'] / store['placer_visits']
+                                  for store in insa_stores])
+
+# Example: if Placer underestimates by 15%, correction_factor = 1.15
+```
+
+**Step 2: Apply Correction to Model Predictions**
+```python
+# Option A: Correct training data (preferred)
+# Adjust Placer visits before training
+corrected_visits = placer_visits * correction_factor
+model.fit(features, corrected_visits)
+
+# Option B: Correct predictions (alternative)
+# Train on raw Placer data, correct output
+raw_prediction = model.predict(features)
+corrected_prediction = raw_prediction * correction_factor
+```
+
+**Step 3: State/Market-Specific Corrections (Advanced)**
+```python
+# If Placer accuracy varies by context
+correction_factors = {
+    'FL_urban': 1.12,      # Placer underestimates urban FL by 12%
+    'FL_suburban': 1.08,   # Placer underestimates suburban FL by 8%
+    'PA_urban': 1.05,      # Placer underestimates urban PA by 5%
+    'PA_suburban': 1.15,   # Placer underestimates suburban PA by 15%
+}
+
+# Apply context-specific correction
+dispensary['market_type'] = classify_market(population_density, state)
+correction = correction_factors[f"{state}_{market_type}"]
+corrected_visits = placer_visits * correction
+```
+
+**Data Requirements**:
+- Insa store actual visit counts (monthly or annualized)
+- Corresponding Placer estimates for same stores and time period
+- Sufficient sample size (ideally 5+ stores for reliable calibration)
+
+**Expected Impact**:
+- More accurate absolute visit predictions
+- Better calibration of confidence intervals
+- Estimated improvement: +0.03 to +0.08 R² (if significant bias exists)
+- Improved business credibility (predictions closer to reality)
+
+**Validation**:
+- Cross-validate on holdout Insa stores
+- Check if correction improves out-of-sample predictions
+- Compare corrected model RMSE vs uncorrected
+
+---
+
+## Priority 4: Brand Effects Analysis
 
 ### Problem Statement
 
@@ -644,43 +801,49 @@ features['brand_performance_index'] = regularized_target_encode(...)
 
 ---
 
-## 🎯 Revised Priority Roadmap (Incorporating Codex Suggestions)
+## 🎯 Revised Priority Roadmap (User-Focused Implementation Order)
 
-### Phase 1: Core Improvements (1-2 days)
+### Phase 1: Data Quality & Temporal Improvements (1-2 days)
 **Target: +0.10 to +0.15 R²**
 
-1. ✅ PA Temporal Adjustments
-   - Annualize visits for sites < 12 months
+1. ✅ **Temporal Adjustments (PA & FL)**
+   - Annualize visits for sites < 12 months (both states)
    - Time-weight competition metrics
+   - Approximate FL opening dates from historical OMMU reports
    - **Codex endorsement**: "Can remove a lot of noise"
+   - **Expected**: +0.05 to +0.08 R²
 
-2. ✅ Brand Effects (with target encoding)
+2. ✅ **Outlier Detection and Removal**
+   - Identify statistical outliers (residuals, leverage)
+   - Business logic filters (extreme sq_ft, visits)
+   - Manual review and data quality validation
+   - **Expected**: +0.02 to +0.05 R²
+
+3. ✅ **Placer Visit Correction**
+   - Calculate Insa actual-to-Placer ratio
+   - Apply correction factor to training data
+   - State/market-specific corrections if needed
+   - **Expected**: +0.03 to +0.08 R²
+
+**Phase 1 Total Expected Improvement**: +0.10 to +0.21 R² (would achieve 0.29-0.40 overall)
+
+### Phase 2: Brand Effects & Digital Footprint (2-3 days)
+**Target: +0.08 to +0.15 R²**
+
+1. ✅ **Brand Effects (with target encoding)**
    - Regularized target encoding (not simple one-hot)
    - Brand × state interactions
    - **Codex endorsement**: "Real, persistent lifts"
+   - **Expected**: +0.05 to +0.10 R²
 
-3. ✅ Digital Footprint Features
+2. ✅ **Digital Footprint Features**
    - Google/Yelp reviews (counts and ratings)
+   - Social media followers
    - **Rationale**: Easy to collect, marketing proxy
    - **Codex suggestion**: Low-effort, often helpful
+   - **Expected**: +0.03 to +0.05 R²
 
-### Phase 2: Enhanced Features (2-3 days)
-**Target: +0.05 to +0.08 R²**
-
-1. ✅ Commercial Context
-   - Nearby retail density (POI counts)
-   - Shopping center indicators
-   - Anchor tenant proximity
-
-2. ✅ Tourism Proxies (FL-specific)
-   - Distance to beaches
-   - Distance to tourist attractions
-   - **Codex note**: "Especially if stores rely on transient customers"
-
-3. ✅ Feature Interactions
-   - sq_ft × saturation
-   - brand × population_density
-   - competitors × median_income
+**Phase 2 Total Expected Improvement**: +0.08 to +0.15 R² (cumulative: 0.37-0.55 overall)
 
 ### Phase 3: Advanced Modeling (1-2 days)
 **Target: +0.03 to +0.08 R²**
