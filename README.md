@@ -184,17 +184,17 @@ multi-state-dispensary-model/
 - **Result**: 100% FL/PA geographic coverage for coordinate-based feature calculation
 - **Deliverables**: `data_loader.py`, `exceptions.py`, `test_data_loader.py`, implementation documentation
 
-### CLI Automation: Phase 2 Coordinate Calculator ✅ COMPLETE
+### CLI Automation: Phase 2 Coordinate Calculator ✅ COMPLETE (with Codex Fix)
 - ✅ Coordinate-based feature calculator class (577 lines)
 - ✅ Population calculation at 1, 3, 5, 10, 20 mile radii
 - ✅ Competition count and normalized metrics (10 features)
 - ✅ Distance-weighted competition score
 - ✅ Census tract matching via API + demographics extraction (7 features)
 - ✅ Master method: 3-4 inputs → 23 base features automatically (87% input reduction)
-- ✅ Enhanced data loader with census tract centroid support
-- ✅ Approximate centroids (fast, county-level) + optional exact centroids
-- **Result**: Users now input only (state, lat, lon, sq_ft) instead of 23 manual features
-- **Deliverables**: `coordinate_calculator.py`, enhanced `data_loader.py`, `fetch_tract_centroids.py`, comprehensive documentation
+- ✅ Enhanced data loader with real per-tract centroids from Census Gazetteer
+- ✅ **Codex Fix Applied**: Replaced county approximations with authoritative Gazetteer centroids
+- **Result**: Users input only (state, lat, lon, sq_ft) - accurate population at ALL radii
+- **Deliverables**: `coordinate_calculator.py`, enhanced `data_loader.py`, `download_gazetteer_files.sh`, documentation
 - **Next**: Phase 3 - CLI Integration (connect calculator to terminal interface)
 
 

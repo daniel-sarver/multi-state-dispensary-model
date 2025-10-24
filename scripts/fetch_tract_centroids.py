@@ -1,40 +1,51 @@
 """
-Fetch Census Tract Centroids
+DEPRECATED: This script is no longer needed.
 
-One-time script to fetch all FL and PA tract centroids and save to cache.
-This takes ~15-20 minutes but only needs to run once.
+Census tract centroids are now loaded automatically from Gazetteer files
+when you first run the coordinate calculator.
 
-Run this before using the coordinate calculator for the first time.
+The Gazetteer files should already be downloaded. If they're missing,
+download them with:
+
+    bash scripts/download_gazetteer_files.sh
+
+Or they will be automatically downloaded on first use of the
+coordinate calculator.
+
+---
+
+WHY THIS SCRIPT IS DEPRECATED:
+
+The original plan was to fetch centroids via Census TIGERweb API
+(~15-20 minutes for 7,624 tracts). However, Codex review identified
+that this approach was too slow and Census Gazetteer files provide
+the same authoritative centroids instantly.
+
+Current approach:
+- Download Census Gazetteer files once (2.3 MB)
+- Extract FL and PA tract centroids (~8,600 tracts total)
+- Load centroids automatically from Gazetteer files
+- Cache for fast future loading
+
+This is much faster than API calls and provides the same accuracy.
 """
 
 import sys
-from pathlib import Path
 
-# Add src to path
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+print("=" * 70)
+print("⚠️  DEPRECATED SCRIPT")
+print("=" * 70)
+print()
+print("This script is no longer needed.")
+print()
+print("Census tract centroids are now loaded automatically from")
+print("Census Gazetteer files when you run the coordinate calculator.")
+print()
+print("If Gazetteer files are missing, download them with:")
+print("    bash scripts/download_gazetteer_files.sh")
+print()
+print("Or they will be downloaded automatically on first use.")
+print()
+print("=" * 70)
 
-from feature_engineering.data_loader import MultiStateDataLoader
-
-if __name__ == "__main__":
-    print("="*70)
-    print("CENSUS TRACT CENTROID FETCHER")
-    print("="*70)
-    print("\nThis script fetches centroids for all FL and PA census tracts.")
-    print("This is a one-time operation that takes ~15-20 minutes.")
-    print("Centroids will be cached for future use.\n")
-
-    response = input("Continue? (y/n): ")
-    if response.lower() != 'y':
-        print("Cancelled.")
-        sys.exit(0)
-
-    print("\nInitializing data loader (this will fetch centroids)...")
-    loader = MultiStateDataLoader()
-
-    print("\n" + "="*70)
-    print("✅ COMPLETE")
-    print("="*70)
-    print(f"\nCentroids cached for future use:")
-    print(f"  • Florida: {len(loader.fl_census)} tracts")
-    print(f"  • Pennsylvania: {len(loader.pa_census)} tracts")
-    print(f"\nYou can now use the coordinate calculator without delays.")
+sys.exit(0)

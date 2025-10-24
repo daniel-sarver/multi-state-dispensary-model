@@ -400,19 +400,17 @@ These documents represent early planning and have been superseded by the complet
 
 ---
 
-### CLI Automation: Phase 2 Coordinate Calculator (Complete ✅)
+### CLI Automation: Phase 2 Coordinate Calculator (Complete ✅ with Codex Fix)
 
 **Completion Reports**:
-- **[PHASE2_COORDINATE_CALCULATOR_COMPLETE.md](PHASE2_COORDINATE_CALCULATOR_COMPLETE.md)** - Phase 2 complete summary
-  - Coordinate-based feature calculator (577 lines)
-  - Population calculation at 1, 3, 5, 10, 20 mile radii
-  - Competition count and normalized metrics (10 features)
-  - Distance-weighted competition score
-  - Census tract matching via API + demographics (7 features)
-  - **Master method**: 3-4 inputs → 23 base features (87% input reduction)
-  - Enhanced data loader with census tract centroid support
-  - Approximate centroids (fast, county-level) + optional exact centroids
-  - **Result**: Users input only (state, lat, lon, sq_ft) instead of 23 manual features
+- **[PHASE2_COORDINATE_CALCULATOR_COMPLETE.md](PHASE2_COORDINATE_CALCULATOR_COMPLETE.md)** - Phase 2 initial completion
+- **[CODEX_REVIEW_PHASE2_CALCULATOR.md](CODEX_REVIEW_PHASE2_CALCULATOR.md)** - Critical centroid issue identified
+- **[PHASE2_CODEX_FIX_COMPLETE.md](PHASE2_CODEX_FIX_COMPLETE.md)** - **Codex fix applied and validated**
+  - **Issue**: County-level centroids collapsed 7,624 tracts → 16 coordinates
+  - **Fix**: Implemented real per-tract centroids from Census Gazetteer files
+  - **Result**: Population calculations accurate at ALL radii (not just 20mi)
+  - **Validation**: Insa Orlando test shows correct populations 1-20mi
+- **Key Achievement**: 3-4 inputs → 23 base features (87% input reduction)
 
 **Code Implementation**:
 - **[src/feature_engineering/coordinate_calculator.py](../src/feature_engineering/coordinate_calculator.py)** - Feature calculator (577 lines)
