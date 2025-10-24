@@ -29,16 +29,20 @@ class DataPreparator:
     Handles missing value imputation, feature engineering, scaling, and splits.
     """
 
-    def __init__(self, data_path='data/processed/combined_with_competitive_features.csv'):
+    def __init__(self, data_path='data/processed/combined_with_competitive_features_corrected.csv',
+                 target_column='corrected_visits'):
         """
         Initialize DataPreparator.
 
         Parameters:
         -----------
         data_path : str
-            Path to combined dataset with competitive features
+            Path to combined dataset with competitive features (default: corrected dataset)
+        target_column : str
+            Target variable name (default: 'corrected_visits' for model v2)
         """
         self.data_path = data_path
+        self.target_column = target_column
         self.df = None
         self.training_df = None
         self.X_train = None
@@ -213,8 +217,8 @@ class DataPreparator:
         """
         print("\nSelecting features for modeling...")
 
-        # Define target variable
-        target = 'visits'
+        # Use configured target variable (model v2 uses 'corrected_visits')
+        target = self.target_column
 
         # Columns to exclude (identifiers, metadata, data quality flags)
         exclude_patterns = [
@@ -224,10 +228,14 @@ class DataPreparator:
             'match_score', 'match_type', 'match_details', 'data_source',
             'chain_name', 'chain_id', 'dispensary_id',
             'latitude', 'longitude',  # Exclude raw coordinates (captured in census features)
-            'visits_per_sq_ft',  # Exclude derived target variable
+            'visits_per_sq_ft',  # Exclude UNCORRECTED derived variable (legacy)
+            'corrected_visits_per_sq_ft',  # Exclude derived target variable
+            'corrected_visits_step1',  # Exclude intermediate correction step (DATA LEAKAGE!)
+            'visits',  # Exclude UNCORRECTED target (legacy - use corrected_visits instead)
             'state',  # Exclude state (we use is_FL/is_PA instead)
             '_date', '_name', '_number', '_type', '_abbr', '_census',  # Exclude text/date columns
-            'product_', 'applicant_', 'permit_', 'license_', 'region'  # Exclude categorical PA columns
+            'product_', 'applicant_', 'permit_', 'license_', 'region',  # Exclude categorical PA columns
+            'temporal_adjustment', 'correction_', 'maturity_', 'months_operational'  # Exclude correction metadata
         ]
 
         # Start with all columns
@@ -253,6 +261,11 @@ class DataPreparator:
                 print(f"  Skipping non-numeric column: {col}")
 
         print(f"Selected {len(candidate_features)} numeric features for modeling")
+
+        # Validation: Warn if using legacy columns
+        if target == 'visits':
+            print("\n⚠️  WARNING: Using UNCORRECTED 'visits' as target!")
+            print("   For model v2, use 'corrected_visits' instead.")
 
         self.feature_names = candidate_features
         self.preparation_report['num_features'] = len(candidate_features)
@@ -332,7 +345,7 @@ class DataPreparator:
 
         # Prepare feature matrix and target
         X = self.training_df[self.feature_names]
-        y = self.training_df['visits']
+        y = self.training_df[self.target_column]  # Use configured target (corrected_visits for v2)
 
         # Stratify by state to maintain FL/PA ratio
         stratify = self.training_df['state']
@@ -524,11 +537,14 @@ class DataPreparator:
 
 if __name__ == '__main__':
     # Example usage
-    print("Multi-State Dispensary Model - Data Preparation")
+    print("Multi-State Dispensary Model - Data Preparation (Model v2)")
     print("=" * 60)
 
-    # Initialize preparator
-    preparator = DataPreparator()
+    # Initialize preparator with corrected dataset and target
+    preparator = DataPreparator(
+        data_path='data/processed/combined_with_competitive_features_corrected.csv',
+        target_column='corrected_visits'
+    )
 
     # Prepare data
     prepared_data = preparator.prepare_data(
@@ -538,6 +554,7 @@ if __name__ == '__main__':
     )
 
     # Save report
-    preparator.save_report()
+    preparator.save_report('data/models/data_preparation_report_v2.json')
 
     print("\nData preparation completed successfully!")
+    print(f"Target variable: {preparator.target_column} (ANNUAL visits)")

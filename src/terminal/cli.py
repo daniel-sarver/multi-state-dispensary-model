@@ -64,8 +64,9 @@ class TerminalInterface:
         print("=" * 70)
         print("MULTI-STATE DISPENSARY PREDICTION MODEL".center(70))
         print("=" * 70)
-        print(f"Model Version:    v1.0")
+        print(f"Model Version:    {info.get('model_version', 'v2.0')}")
         print(f"Training Date:    {info['training_date'][:10]}")
+        print(f"Target:           {info.get('target_column', 'corrected_visits')} (Annual)")
         print(f"Test R²:          {info['test_r2']:.4f}")
         print(f"Cross-Val R²:     {info['cv_r2_mean']:.4f} ± {info['cv_r2_std']:.4f}")
         print(f"Improvement:      {info['improvement_over_baseline']}")
@@ -248,7 +249,7 @@ class TerminalInterface:
 
         if successful > 0:
             avg_pred = results_df[results_df['predicted_visits'].notna()]['predicted_visits'].mean()
-            print(f"  Avg Prediction:  {avg_pred:,.0f} visits/month")
+            print(f"  Avg Prediction:  {avg_pred:,.0f} visits/year")
 
     def show_model_info(self):
         """Display detailed model information."""
@@ -260,17 +261,17 @@ class TerminalInterface:
 
         print("\n📊 Overall Performance:")
         print(f"  Test R²:               {info['test_r2']:.4f}")
-        print(f"  Test RMSE:             {info['test_rmse']:,.0f} visits/month")
+        print(f"  Test RMSE:             {info['test_rmse']:,.0f} visits/year")
         print(f"  Cross-Val R²:          {info['cv_r2_mean']:.4f} ± {info['cv_r2_std']:.4f}")
         print(f"  Improvement:           {info['improvement_over_baseline']}")
 
         print("\n🏛️  Florida Performance:")
         print(f"  Test R²:               {info['fl_r2']:.4f}")
-        print(f"  Test RMSE:             {info['fl_rmse']:,.0f} visits/month")
+        print(f"  Test RMSE:             {info['fl_rmse']:,.0f} visits/year")
 
         print("\n🏛️  Pennsylvania Performance:")
         print(f"  Test R²:               {info['pa_r2']:.4f}")
-        print(f"  Test RMSE:             {info['pa_rmse']:,.0f} visits/month")
+        print(f"  Test RMSE:             {info['pa_rmse']:,.0f} visits/year")
 
         print("\n🔧 Model Configuration:")
         print(f"  Model Type:            Ridge Regression")
@@ -469,7 +470,7 @@ class TerminalInterface:
 
         # Prediction
         print("\n🎯 Prediction:")
-        print(f"  Expected Monthly Visits:   {result['prediction']:,.0f}")
+        print(f"  Expected Annual Visits:    {result['prediction']:,.0f}")
         print(f"  95% Confidence Interval:   {result['ci_lower']:,.0f} - {result['ci_upper']:,.0f}")
 
         # Confidence level assessment
@@ -517,18 +518,18 @@ class TerminalInterface:
         # Interpretation
         print("\n💡 Interpretation:")
         if conf_level == "LOW":
-            print(f"  This site shows predicted performance of {result['prediction']:,.0f} visits/month")
+            print(f"  This site shows predicted performance of {result['prediction']:,.0f} visits/year")
             print(f"  with HIGH uncertainty. The wide confidence interval ({ci_range:,.0f} range)")
             print(f"  reflects the model's limited explanatory power (R² = {info['test_r2']:.2f}).")
             print(f"  Consider this prediction as DIRECTIONAL GUIDANCE rather than a")
             print(f"  precise forecast.")
         elif conf_level == "MODERATE":
-            print(f"  This site shows predicted performance of {result['prediction']:,.0f} visits/month")
+            print(f"  This site shows predicted performance of {result['prediction']:,.0f} visits/year")
             print(f"  with MODERATE uncertainty. The confidence interval ({ci_range:,.0f} range)")
             print(f"  reflects typical model uncertainty (R² = {info['test_r2']:.2f}).")
             print(f"  Use as guidance for site comparison and ranking.")
         else:
-            print(f"  This site shows predicted performance of {result['prediction']:,.0f} visits/month")
+            print(f"  This site shows predicted performance of {result['prediction']:,.0f} visits/year")
             print(f"  with relatively LOW uncertainty. The narrow confidence interval")
             print(f"  ({ci_range:,.0f} range) suggests higher confidence in this prediction.")
 

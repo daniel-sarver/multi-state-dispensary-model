@@ -38,8 +38,16 @@ class MultiStateModelTrainer:
     Uses Ridge regression with state interactions and comprehensive validation.
     """
 
-    def __init__(self):
-        """Initialize ModelTrainer."""
+    def __init__(self, model_version='v2'):
+        """
+        Initialize ModelTrainer.
+
+        Parameters:
+        -----------
+        model_version : str
+            Model version identifier (default: 'v2' for corrected data)
+        """
+        self.model_version = model_version
         self.preparator = None
         self.prepared_data = None
         self.model = None
@@ -58,18 +66,32 @@ class MultiStateModelTrainer:
             Prepared data dictionary
         """
         print("="*60)
-        print("STEP 1: DATA PREPARATION")
+        print(f"STEP 1: DATA PREPARATION (Model {self.model_version})")
         print("="*60 + "\n")
 
-        self.preparator = DataPreparator()
+        # Use corrected dataset and target for model v2
+        if self.model_version == 'v2':
+            data_path = 'data/processed/combined_with_competitive_features_corrected.csv'
+            target_column = 'corrected_visits'
+            print(f"Model v2: Using corrected dataset and target '{target_column}' (ANNUAL visits)\n")
+        else:
+            data_path = 'data/processed/combined_with_competitive_features.csv'
+            target_column = 'visits'
+            print(f"Model v1: Using uncorrected dataset and target '{target_column}'\n")
+
+        self.preparator = DataPreparator(
+            data_path=data_path,
+            target_column=target_column
+        )
         self.prepared_data = self.preparator.prepare_data(
             test_size=0.2,
             random_state=42,
             scale=True
         )
 
-        # Save preparation report
-        self.preparator.save_report()
+        # Save preparation report with version
+        report_path = f'data/models/data_preparation_report_{self.model_version}.json'
+        self.preparator.save_report(report_path)
 
         return self.prepared_data
 
@@ -535,18 +557,22 @@ class MultiStateModelTrainer:
 
         plt.close()
 
-    def save_model(self, model_path='data/models/multi_state_model_v1.pkl'):
+    def save_model(self, model_path=None):
         """
         Save trained model to pickle file.
 
         Parameters:
         -----------
-        model_path : str
-            Path to save model
+        model_path : str, optional
+            Path to save model (default: auto-generated based on model_version)
         """
         print("\n" + "="*60)
         print("STEP 9: SAVING MODEL ARTIFACT")
         print("="*60 + "\n")
+
+        # Auto-generate path if not provided
+        if model_path is None:
+            model_path = f'data/models/multi_state_model_{self.model_version}.pkl'
 
         model_path = Path(model_path)
         model_path.parent.mkdir(parents=True, exist_ok=True)
@@ -558,6 +584,9 @@ class MultiStateModelTrainer:
             'feature_names': self.prepared_data['feature_names'],
             'best_alpha': self.best_alpha,
             'training_date': datetime.now().isoformat(),
+            'model_version': self.model_version,
+            'target_column': self.preparator.target_column,
+            'data_units': 'annual_visits',  # Important: predictions are in annual visits
             'training_report': self.training_report
         }
 
@@ -566,19 +595,25 @@ class MultiStateModelTrainer:
             pickle.dump(model_package, f)
 
         print(f"Model saved to: {model_path}")
+        print(f"Model version: {self.model_version}")
+        print(f"Target: {self.preparator.target_column} (ANNUAL visits)")
         print(f"Model size: {model_path.stat().st_size / 1024:.2f} KB")
 
         return model_path
 
-    def save_training_report(self, report_path='data/models/model_performance_report.json'):
+    def save_training_report(self, report_path=None):
         """
         Save comprehensive training report to JSON.
 
         Parameters:
         -----------
-        report_path : str
-            Path to save report
+        report_path : str, optional
+            Path to save report (default: auto-generated based on model_version)
         """
+        # Auto-generate path if not provided
+        if report_path is None:
+            report_path = f'data/models/multi_state_model_{self.model_version}_training_report.json'
+
         report_path = Path(report_path)
         report_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -658,8 +693,12 @@ class MultiStateModelTrainer:
 
 
 if __name__ == '__main__':
-    # Train model
-    trainer = MultiStateModelTrainer()
+    # Train model v2 with corrected data
+    print("Training Multi-State Dispensary Model v2")
+    print("Using corrected dataset with calibrated annual visits\n")
+
+    trainer = MultiStateModelTrainer(model_version='v2')
     training_report = trainer.train_and_evaluate()
 
-    print("\nModel training and evaluation completed successfully!")
+    print("\nModel v2 training and evaluation completed successfully!")
+    print("Predictions are in ANNUAL visits (corrected, calibrated to Insa actual)")

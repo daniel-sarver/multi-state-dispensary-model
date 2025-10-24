@@ -14,7 +14,7 @@ This project enhances the successful PA Dispensary Model (v3.1) by:
 
 ## Quick Start
 
-**Status**: Phase 3b (Model Training) - Competitive Features Complete, Ready for Model Development
+**Status**: Phase 6 (Model v2 Training) - Data Corrections Complete, Ready to Train Model v2
 
 ```bash
 # Navigate to project directory
@@ -27,19 +27,24 @@ cp .env.example .env
 # Install dependencies
 pip install -r requirements.txt
 
-# Verify dataset ready for modeling
-python3 -c "import pandas as pd; df = pd.read_csv('data/processed/combined_with_competitive_features.csv'); print(f'Training dispensaries: {df[df.has_placer_data==True].shape[0]}')"
+# Verify corrected dataset
+python3 -c "import pandas as pd; df = pd.read_csv('data/processed/combined_with_competitive_features_corrected.csv'); print(f'Training dispensaries: {df[df.has_placer_data==True].shape[0]}'); print(f'Target: corrected_visits (ANNUAL)')"
 
-# Next: Build Ridge regression model (Phase 3b)
-# Coming soon: python3 src/modeling/train_multi_state_model.py
+# Train model v2 with corrected data
+python3 src/modeling/train_multi_state_model.py
+
+# Run terminal interface (after training)
+python3 src/terminal/cli.py
 ```
 
 ## Model Architecture
 
-**Target Performance**: Significantly improved R² over PA model's 0.0716
-**Training Data**: ~750 dispensaries across PA & FL
-**Features**: Multi-radius population, distance-weighted competition, demographics, state factors
-**Model Type**: Enhanced Ridge regression with state interaction terms
+**Current Version**: Model v2 (corrected annual visits)
+**Target Performance**: R² > 0.15 (significant improvement over baseline 0.0716)
+**Training Data**: 741 dispensaries across PA & FL (corrected, calibrated to Insa actual)
+**Target Variable**: `corrected_visits` (ANNUAL visits, Placer-corrected with temporal adjustments)
+**Features**: 44 features including multi-radius population, distance-weighted competition, demographics, state interactions
+**Model Type**: Ridge regression (α=1000) with state interaction terms
 
 ## Data Sources
 
@@ -132,31 +137,36 @@ multi-state-dispensary-model/
 - ✅ Feature validator class (`FeatureValidator`)
 - ✅ Auto-generation of 21 derived features (from 23 base inputs)
 - ✅ Range validation with training data statistics
-- ✅ Interactive terminal interface (`TerminalInterface` class)
-- ✅ Pretty-print output formatting (PA model style)
-- ✅ Batch CSV processing with results export
-- **Deliverables**: `src/prediction/predictor.py` (600+ lines), `src/prediction/feature_validator.py` (600+ lines), `src/terminal/cli.py` (545 lines)
+- ✅ Interactive terminal CLI with model info display
+- **Deliverables**: `cli.py`, `predictor.py`, `feature_validator.py`
 
-### Phase 5a: Model Improvement - Exploration ✅ COMPLETE
-- ✅ Data exploration and improvement opportunity analysis
-- ✅ Temporal adjustments analysis (PA not needed, FL has 17 sites <12 months)
-- ✅ Outlier detection and review (4 sites analyzed, all kept as legitimate)
-- ✅ Placer correction methodology designed (7 Insa stores matched)
-- ✅ Outlier detection script (`detect_outliers.py` - 353 lines)
-- **Deliverables**: Exploration findings, outlier review decisions, correction methodology
+### Phase 5a: Data Quality Exploration ✅ COMPLETE
+- ✅ Residual analysis and outlier identification
+- ✅ Model performance deep dive (v1 baseline)
+- ✅ Validation against Insa actual performance
+- ✅ Discovery: Placer data is ANNUAL (not monthly)
+- ✅ Discovery: Placer overestimates by ~45%
+- **Deliverables**: `PHASE5_DATA_EXPLORATION_FINDINGS.md`, `MODEL_PERFORMANCE_EXECUTIVE_SUMMARY.md`
 
-### Phase 5b: Data Corrections Implementation ✅ COMPLETE
-- ✅ Extracted Insa actual data (10 FL stores, April 2025 monthly transactions)
-- ✅ Discovered Placer data is ANNUAL visits (critical finding)
-- ✅ Calculated Placer correction factor: 0.5451 (overestimates by 45.5%)
-- ✅ Applied Placer correction to all 741 training dispensaries
-- ✅ Parsed FL recent openings (59 dispensaries, Oct 2024 - Oct 2025)
-- ✅ Matched and adjusted 17 FL sites <12 months operational
-- ✅ Created corrected dataset with clear naming convention
-- **Scripts**: `extract_insa_data.py` (192 lines), `apply_corrections.py` (488 lines)
-- **Deliverables**: `combined_with_competitive_features_corrected.csv` (placer_visits → corrected_visits)
-- **Impact**: Mean visits 71,066 → 38,935 (-45.2% correction)
-- **Next**: Retrain model v2 with corrected_visits as target
+### Phase 5b: Data Corrections ✅ COMPLETE
+- ✅ Placer calibration correction (factor: 0.5451, based on 7 Insa stores)
+- ✅ FL temporal adjustments (15 sites <12 months, maturity curve applied)
+- ✅ Insa actual data extraction (10 FL stores, April 2025)
+- ✅ Created corrected dataset with proper naming convention
+- ✅ Mean visits corrected: 71,066 → 38,935 (-45.2%)
+- **Deliverables**: `combined_with_competitive_features_corrected.csv`, correction scripts, comprehensive documentation
+- **Key Discovery**: Model v1 was training on systematically inflated targets
+
+### Phase 6: Model v2 Training 🔄 IN PROGRESS
+- ✅ Fixed data leakage (`corrected_visits_step1` excluded from features)
+- ✅ Updated training pipeline for corrected dataset
+- ✅ Updated CLI for annual visit display
+- ✅ Documentation corrections (15 temporal adjustments, not 17)
+- ⏳ **NEXT**: Train model v2 with `corrected_visits` target
+- ⏳ Update predictor.py to load v2 model
+- ⏳ Compare v1 vs v2 performance
+- ⏳ Validate v2 against Insa actual (expect 45% better accuracy)
+
 
 ## Key Achievements
 
@@ -220,4 +230,4 @@ See [docs/README.md](docs/README.md) for complete documentation index.
 *Building on the foundation of the PA Dispensary Model v3.1 to create the next generation of dispensary site analysis tools.*
 
 **GitHub**: https://github.com/daniel-sarver/multi-state-dispensary-model
-**Last Updated**: October 24, 2025 (Phase 5b Complete)
+**Last Updated**: October 24, 2025 (Phase 6 - Ready to Train Model v2)

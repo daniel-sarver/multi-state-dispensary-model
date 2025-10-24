@@ -11,7 +11,7 @@
 
 Successfully implemented two major data corrections:
 1. **Placer Calibration Correction** - Using Insa actual data (7 stores matched)
-2. **FL Temporal Adjustments** - Annualizing 17 dispensaries <12 months operational
+2. **FL Temporal Adjustments** - Annualizing 15 dispensaries <12 months operational
 
 **Key Discovery**: Placer data represents **ANNUAL visits** and **overestimates by 45.5%**
 
@@ -90,7 +90,7 @@ Interpretation: Placer OVERESTIMATES by 45.5%
 
 **Step 2: Match to Training Data**
 - Matched by brand and city
-- Successfully matched **17 of 53** recent openings to training data
+- Successfully matched **15 of 53** recent openings to training data
 - Average months operational: 7.8 months
 
 **Step 3: Apply Maturity Curve**
@@ -118,7 +118,7 @@ annualized_visits = corrected_visits_step1 / maturity_factor
 - After temporal adjustment: 27,255 / 0.75 = **36,340 annualized**
 
 ### Impact
-- 17 FL dispensaries adjusted
+- 15 FL dispensaries adjusted
 - Average increase: +25.2% after annualization
 - Mean visits before temporal: 37,949
 - Mean visits after temporal: 47,526
@@ -147,8 +147,8 @@ annualized_visits = corrected_visits_step1 / maturity_factor
 
 | Dispensary Type | Count | Corrections Applied |
 |-----------------|-------|---------------------|
-| FL, <12 months old | 17 | Placer + Temporal |
-| FL, ≥12 months old | 573 | Placer only |
+| FL, <12 months old | 15 | Placer + Temporal |
+| FL, ≥12 months old | 575 | Placer only |
 | PA (all mature) | 151 | Placer only |
 | **Total Training** | **741** | - |
 
@@ -163,7 +163,7 @@ annualized_visits = corrected_visits_step1 / maturity_factor
 - `placer_visits`: Original Placer ANNUAL estimates (UNCORRECTED)
 - `corrected_visits`: ANNUAL visits after Placer + temporal corrections (**USE FOR MODELING**)
 - `corrected_visits_per_sq_ft`: Efficiency metric with corrected data
-- `temporal_adjustment_applied`: Boolean flag (17 FL sites = True)
+- `temporal_adjustment_applied`: Boolean flag (15 FL sites = True)
 - `months_operational_at_collection`: Months open as of Oct 23, 2025
 - `maturity_factor`: Maturity curve factor used for annualization
 - `correction_placer_factor`: 0.5451 (applied to all)
@@ -195,7 +195,7 @@ annualized_visits = corrected_visits_step1 / maturity_factor
 - **Correction is essential for accurate predictions**
 
 ### Finding 3: FL Has Significant Temporal Effects
-- 17 of 590 FL training sites needed adjustment (2.9%)
+- 15 of 590 FL training sites needed adjustment (2.5%)
 - Average maturity: 7.8 months (79% of steady-state)
 - **Very different from PA** (only 1 site <12 months)
 - Temporal adjustments increased visits by 25% on average
@@ -302,7 +302,7 @@ model_v2 = train_multi_state_model(
 ✅ **Calculated correction factor** (0.5451)
 ✅ **Applied Placer correction** to all 741 training dispensaries
 ✅ **Parsed FL openings data** (59 recent dispensaries)
-✅ **Matched 17 FL sites** <12 months old
+✅ **Matched 15 FL sites** <12 months old
 ✅ **Applied temporal adjustments** with maturity curve
 ✅ **Created corrected dataset** with clear naming convention
 ✅ **Documented methodology** for reproducibility
@@ -326,7 +326,7 @@ model_v2 = train_multi_state_model(
 
 ### Data Quality
 - 7 of 10 Insa stores matched (70% match rate)
-- 17 of 53 FL openings matched to training data (32% match rate)
+- 15 of 53 FL openings matched to training data (28% match rate)
 - Unmatched sites: likely in competitive dataset but not training set
 
 ### Validation Opportunities

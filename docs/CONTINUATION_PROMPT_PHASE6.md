@@ -20,7 +20,7 @@
 
 2. **FL Temporal Adjustments**
    - Parsed 59 FL recent openings (Oct 2024 - Oct 2025)
-   - Matched 17 dispensaries <12 months operational
+   - Matched 15 dispensaries <12 months operational
    - Applied maturity curve (30% → 100% over 12 months)
    - Annualized performance for sites not yet at steady-state
 
@@ -147,7 +147,7 @@ y = df['corrected_visits']  # Corrected ANNUAL visits
 **Key Columns:**
 - `corrected_visits`: Target variable for model v2 (ANNUAL, corrected)
 - All feature columns from v1 (unchanged)
-- `temporal_adjustment_applied`: Boolean flag (17 FL sites)
+- `temporal_adjustment_applied`: Boolean flag (15 FL sites)
 - `months_operational_at_collection`: Months open as of Oct 23, 2025
 - `maturity_factor`: Maturity curve factor used
 - `correction_placer_factor`: 0.5451 for all training sites
@@ -155,7 +155,7 @@ y = df['corrected_visits']  # Corrected ANNUAL visits
 **Training Data:**
 - 741 dispensaries with `has_placer_data=True`
 - 590 FL, 151 PA
-- 17 FL sites have temporal adjustments applied
+- 15 FL sites have temporal adjustments applied
 
 ### Model v1 for Comparison
 **Path**: `data/models/multi_state_model_v1.pkl`
@@ -207,7 +207,7 @@ Contains metrics, feature importance, and validation results from v1
 
 ### Data Corrections Already Applied
 ✅ Placer correction (0.5451 factor) - applied to all 741 training sites
-✅ FL temporal adjustments - applied to 17 sites <12 months operational
+✅ FL temporal adjustments - applied to 15 sites <12 months operational
 ✅ Naming convention - `placer_visits` vs `corrected_visits` clearly separated
 
 **DO NOT re-apply corrections** - they're already in the dataset
