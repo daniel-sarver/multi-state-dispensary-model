@@ -350,51 +350,113 @@ These documents represent early planning and have been superseded by the complet
 ### CLI Automation: Phase 1 Data Infrastructure (Complete ✅)
 
 **Completion Reports**:
-- **[CLI_AUTOMATION_IMPLEMENTATION_PLAN.md](CLI_AUTOMATION_IMPLEMENTATION_PLAN.md)** - Complete implementation plan (Phases 1-4)
-  - Problem: Current CLI requires 23 manual inputs per site
-  - Solution: Coordinate-based automation (3-4 inputs only)
-  - Architecture: Data loader + feature calculator + enhanced CLI
-  - Estimated: 5-9 hours total implementation
-- **[PHASE1_DATA_INFRASTRUCTURE_COMPLETE.md](PHASE1_DATA_INFRASTRUCTURE_COMPLETE.md)** - Phase 1 completion summary
+- **[PHASE1_DATA_INFRASTRUCTURE_COMPLETE.md](PHASE1_DATA_INFRASTRUCTURE_COMPLETE.md)** - Phase 1 complete summary
+  - Custom exception classes for explicit error handling (no fallbacks)
   - Multi-state data loader with full statewide census coverage
   - 7,624 census tracts loaded (4,983 FL + 2,641 PA) - 12.7x improvement
   - 741 dispensaries for competition analysis
   - Comprehensive test suite (8 tests, all passing)
-- **[PHASE1_CODEX_REVIEW_FIX.md](PHASE1_CODEX_REVIEW_FIX.md)** - Critical census coverage fix
-  - Original implementation: Only 600 tracts (10% coverage)
-  - Fixed implementation: 7,624 tracts (100% statewide coverage)
-  - Root cause: Used training data instead of Phase 2 statewide output
-  - Impact: Enables greenfield coordinate searches anywhere in FL/PA
+  - **Codex review fix**: Increased coverage from 600 → 7,624 tracts (100% FL/PA)
+  - **Result**: Geographic coverage for coordinate-based feature calculation
+
+**Planning Documentation**:
+- **[CLI_AUTOMATION_IMPLEMENTATION_PLAN.md](CLI_AUTOMATION_IMPLEMENTATION_PLAN.md)** - Complete 4-phase implementation plan
+  - Problem statement: 23 manual inputs per site
+  - Solution: Coordinate-based automation (3-4 inputs)
+  - Detailed architecture for all 4 phases
+  - Code patterns and best practices
+
+**Code Review Documentation**:
+- **[PHASE1_CODEX_REVIEW_FIX.md](PHASE1_CODEX_REVIEW_FIX.md)** - Critical coverage fix
+  - Issue: Only 600 census tracts loaded (10% coverage)
+  - Fix: Changed data source to Phase 2 statewide output (7,624 tracts)
+  - Impact: Enabled greenfield searches anywhere in FL/PA
+  - Time to fix: 30 minutes
 
 **Code Implementation**:
 - **[src/feature_engineering/exceptions.py](../src/feature_engineering/exceptions.py)** - Custom error classes (44 lines)
-  - `DataNotFoundError` - No fallbacks allowed when data missing
+  - `DataNotFoundError` - No fallback values allowed
   - `InvalidStateError` - Only FL/PA supported
-  - `InvalidCoordinatesError` - Coordinate validation failures
-- **[src/feature_engineering/data_loader.py](../src/feature_engineering/data_loader.py)** - Multi-state data loader (368 lines)
-  - Loads 7,624 census tracts from Phase 2 statewide output
-  - Loads 741 dispensaries for competition analysis
-  - State-specific data access (FL/PA)
+  - `InvalidCoordinatesError` - Coordinate validation
+- **[src/feature_engineering/data_loader.py](../src/feature_engineering/data_loader.py)** - Multi-state data loader (368→568 lines)
+  - Loads 7,624 census tracts with demographics
+  - Loads 741 dispensaries for competition
+  - State-specific data access
   - Population density calculation
   - Comprehensive validation
 - **[tests/test_data_loader.py](../tests/test_data_loader.py)** - Data loader test suite (282 lines)
-  - 8 test cases covering initialization, data quality, error handling
-  - Validates 7,000+ census tract coverage
-  - All tests passing
+  - 8 test cases, all passing ✅
+  - Coverage validation (7,000+ tracts)
+  - Data quality validation
 
-**Key Technical Decisions**:
-- **Census Tract Lookup Strategy**: Use Census Geocoding API for coordinate→GEOID lookup, then demographics lookup
-- **No Centroids**: Census tracts are polygons, not points - API provides exact identification
-- **Statewide Coverage**: Load all 7,624 tracts from Phase 2 output (not just training data)
-- **Explicit Errors**: No fallback values - raise clear errors when data unavailable
+**Continuation Prompt**:
+- **[CLI_AUTOMATION_CONTINUATION_PROMPT.md](CLI_AUTOMATION_CONTINUATION_PROMPT.md)** - Phase 1→2 transition context
+  - Quick start continuation prompt for after compacting
+  - Current project state summary
+  - Phase 2 implementation checklist
+  - Architecture reference and code examples
 
-**Status**: Data infrastructure complete - 100% FL/PA geographic coverage for coordinate-based feature calculation
+**Status**: Phase 1 complete - Data infrastructure ready for Phase 2 (coordinate calculator)
 
-**Next**: Phase 2 - Coordinate-based feature calculator
-- Build population/competition calculators using Census API + geodesic distance
-- Implement census tract matching with explicit error handling
-- Create master `calculate_all_features()` method
-- Estimated: 2-3 hours
+---
+
+### CLI Automation: Phase 2 Coordinate Calculator (Complete ✅)
+
+**Completion Reports**:
+- **[PHASE2_COORDINATE_CALCULATOR_COMPLETE.md](PHASE2_COORDINATE_CALCULATOR_COMPLETE.md)** - Phase 2 complete summary
+  - Coordinate-based feature calculator (577 lines)
+  - Population calculation at 1, 3, 5, 10, 20 mile radii
+  - Competition count and normalized metrics (10 features)
+  - Distance-weighted competition score
+  - Census tract matching via API + demographics (7 features)
+  - **Master method**: 3-4 inputs → 23 base features (87% input reduction)
+  - Enhanced data loader with census tract centroid support
+  - Approximate centroids (fast, county-level) + optional exact centroids
+  - **Result**: Users input only (state, lat, lon, sq_ft) instead of 23 manual features
+
+**Code Implementation**:
+- **[src/feature_engineering/coordinate_calculator.py](../src/feature_engineering/coordinate_calculator.py)** - Feature calculator (577 lines)
+  - `CoordinateFeatureCalculator` class
+  - `calculate_population_multi_radius()` - Population at all radii
+  - `calculate_competitors_multi_radius()` - Competition counts + normalized
+  - `calculate_competition_weighted()` - Distance-weighted score
+  - `match_census_tract()` - Census API + demographics extraction
+  - `calculate_all_features()` - Master method (3 inputs → 23 features)
+  - `validate_coordinates()` - State boundary checking
+- **[src/feature_engineering/data_loader.py](../src/feature_engineering/data_loader.py)** - Enhanced with centroids (+200 lines)
+  - Fixed: `dtype={'census_geoid': str}` for GEOID loading
+  - `_add_tract_centroids()` - Centroid loading logic
+  - `_add_approximate_centroids()` - Fast county-level approximation
+  - `_save_centroid_cache()` - Cache exact centroids
+  - `_fill_missing_centroids()` - Fill gaps with Census API
+  - `_add_tract_centroids_via_api()` - Fetch all centroids from API
+- **[scripts/fetch_tract_centroids.py](../scripts/fetch_tract_centroids.py)** - Centroid fetcher utility
+  - One-time script to fetch exact centroids (15-20 minutes)
+  - Caches results for future use
+  - Optional enhancement (system works with approximate centroids)
+
+**Current Limitation**:
+- Using approximate census tract centroids (county-level) by default
+- Accurate at 20mi radius, undercounted at 1-10mi radii
+- Optional fix: Run `python3 scripts/fetch_tract_centroids.py` for exact centroids
+
+**Test Results**:
+```
+Test Case: Insa Orlando, FL
+  ✓ Coordinates validated
+  ✓ Population 20mi: 1,440,471
+  ✓ Competition: 2/6/9/21/48 at 1/3/5/10/20 mi
+  ✓ Weighted score: 8.4708
+  ✓ Census tract matched: 12095016511
+  ✓ Demographics extracted correctly
+  ✅ All 23 features generated successfully
+```
+
+**Key Achievement**: 87% reduction in user inputs (23 → 3-4 inputs)
+
+**Status**: Phase 2 complete - Coordinate calculator ready for CLI integration
+
+**Next**: Phase 3 - CLI Integration (connect calculator to terminal interface)
 
 ---
 

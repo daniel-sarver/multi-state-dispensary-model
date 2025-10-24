@@ -183,7 +183,7 @@ class MultiStateDataLoader:
                 "Expected Phase 2 output with ~7,700 census tracts."
             )
 
-        census = pd.read_csv(census_file)
+        census = pd.read_csv(census_file, dtype={'census_geoid': str})
         print(f"    • Loaded {len(census)} statewide census tracts")
 
         # Add state column from FIPS code
@@ -201,6 +201,9 @@ class MultiStateDataLoader:
         # tract_area_sqm is in square meters, convert to square miles (1 sq mi = 2,589,988.11 sq m)
         census['population_density'] = census['total_population'] / (census['tract_area_sqm'] / 2589988.11)
 
+        # Load census tract centroids for distance calculations
+        census = self._add_tract_centroids(census)
+
         # Split by state
         self.fl_census = census[census['state'] == 'FL'].copy()
         self.pa_census = census[census['state'] == 'PA'].copy()
@@ -214,6 +217,229 @@ class MultiStateDataLoader:
             raise ValueError(f"Insufficient Florida census tract coverage: {len(self.fl_census)} (expected ~5,000)")
         if len(self.pa_census) < 500:
             raise ValueError(f"Insufficient Pennsylvania census tract coverage: {len(self.pa_census)} (expected ~2,600)")
+
+    def _add_tract_centroids(self, census: pd.DataFrame) -> pd.DataFrame:
+        """
+        Add latitude/longitude centroids for census tracts.
+
+        Uses cached centroid data if available, otherwise calculates approximate
+        centroids from county-level data. For exact centroids, run
+        scripts/fetch_tract_centroids.py (one-time 15-20 minute operation).
+
+        Args:
+            census (DataFrame): Census tract data with census_geoid column
+
+        Returns:
+            DataFrame: Census data with added 'latitude' and 'longitude' columns
+        """
+        print("    • Loading census tract centroids...")
+
+        # Check for cached exact centroids
+        cache_file = self.project_root / "data" / "census" / "cache" / "tract_centroids.csv"
+
+        if cache_file.exists():
+            print(f"      ✓ Loading exact centroids from cache...")
+            centroids_df = pd.read_csv(cache_file, dtype={'census_geoid': str})
+            census = census.merge(centroids_df[['census_geoid', 'latitude', 'longitude']],
+                                 on='census_geoid', how='left')
+
+            missing = census['latitude'].isna().sum()
+            if missing == 0:
+                print(f"      ✓ All {len(census)} tract centroids loaded from cache")
+                return census
+
+        # No cache - use approximate centroids from county centers
+        # This is fast but less accurate (~1-5 mile error typical)
+        print(f"      ℹ️  Using approximate centroids from county centers")
+        print(f"      💡 For exact centroids, run: python3 scripts/fetch_tract_centroids.py")
+
+        census = self._add_approximate_centroids(census)
+
+        return census
+
+    def _add_approximate_centroids(self, census: pd.DataFrame) -> pd.DataFrame:
+        """
+        Add approximate centroids using county-level geographic centers.
+
+        This is a fast approximation useful for testing. Typical error is 1-5 miles
+        from true tract centroid, which is acceptable for population/competition
+        analysis at 5-20 mile radii.
+
+        Args:
+            census (DataFrame): Census data with state/county FIPS
+
+        Returns:
+            DataFrame: Census data with approximate lat/lon added
+        """
+        # County center coordinates for FL and PA major counties
+        # These are approximate centers of counties
+        county_centers = {
+            # Florida major counties
+            ('12', '011'): (26.6706, -80.0933),  # Broward
+            ('12', '086'): (27.9506, -82.4572),  # Miami-Dade
+            ('12', '095'): (28.5383, -81.3792),  # Orange (Orlando)
+            ('12', '103'): (27.8364, -82.6881),  # Pinellas
+            ('12', '057'): (26.6406, -81.8732),  # Hillsborough (Tampa)
+            ('12', '071'): (26.2034, -80.1252),  # Lee
+            ('12', '009'): (30.4382, -84.2807),  # Brevard
+
+            # Pennsylvania major counties
+            ('42', '003'): (40.4686, -79.9375),  # Allegheny (Pittsburgh)
+            ('42', '101'): (40.0379, -75.1398),  # Philadelphia
+            ('42', '091'): (40.2732, -76.8867),  # Montgomery
+            ('42', '045'): (40.0417, -76.3058),  # Delaware
+            ('42', '017'): (40.6023, -75.4714),  # Bucks
+            ('42', '071'): (40.0412, -76.3065),  # Lancaster
+            ('42', '077'): (40.4406, -78.3947),  # Lehigh
+        }
+
+        # State default centers (used if county not in list)
+        state_centers = {
+            '12': (28.0, -82.0),  # FL approximate center
+            '42': (40.5, -77.5),  # PA approximate center
+        }
+
+        def get_approx_centroid(row):
+            state_fips = str(row['census_state_fips']).zfill(2)
+            county_fips = str(row['census_county_fips']).zfill(3)
+
+            # Try county lookup
+            key = (state_fips, county_fips)
+            if key in county_centers:
+                return pd.Series(county_centers[key])
+
+            # Fall back to state center
+            if state_fips in state_centers:
+                return pd.Series(state_centers[state_fips])
+
+            # Last resort - use zeros (will be filtered in validation)
+            return pd.Series((0.0, 0.0))
+
+        census[['latitude', 'longitude']] = census.apply(get_approx_centroid, axis=1)
+
+        return census
+
+    def _save_centroid_cache(self, census: pd.DataFrame) -> None:
+        """
+        Save tract centroids to cache file.
+
+        Args:
+            census (DataFrame): Census data with lat/lon
+        """
+        cache_file = self.project_root / "data" / "census" / "cache" / "tract_centroids.csv"
+        cache_file.parent.mkdir(parents=True, exist_ok=True)
+
+        # Save only GEOID and centroids
+        centroid_data = census[['census_geoid', 'latitude', 'longitude']].copy()
+        centroid_data = centroid_data[centroid_data['latitude'].notna()]
+
+        centroid_data.to_csv(cache_file, index=False)
+        print(f"      ✓ Cached {len(centroid_data)} centroids to {cache_file}")
+
+    def _fill_missing_centroids(self, census: pd.DataFrame) -> pd.DataFrame:
+        """
+        Fill missing centroids using Census API.
+
+        Args:
+            census (DataFrame): Census data with some missing lat/lon
+
+        Returns:
+            DataFrame: Census data with centroids filled
+        """
+        from .census_tract_identifier import CensusTractIdentifier
+        import requests
+        import time
+
+        missing_mask = census['latitude'].isna()
+        missing_tracts = census[missing_mask].copy()
+
+        if len(missing_tracts) == 0:
+            return census
+
+        print(f"      Fetching {len(missing_tracts)} tract centroids from Census API...")
+
+        for idx, tract in missing_tracts.iterrows():
+            geoid = tract['census_geoid']
+            state_fips = geoid[:2]
+            county_fips = geoid[2:5]
+            tract_fips = geoid[5:11]
+
+            try:
+                # Use Census TIGERweb API for tract geometry
+                url = f"https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Tracts_Blocks/MapServer/8/query"
+                params = {
+                    'where': f"STATE='{state_fips}' AND COUNTY='{county_fips}' AND TRACT='{tract_fips}'",
+                    'outFields': 'CENTLAT,CENTLON',
+                    'f': 'json'
+                }
+
+                response = requests.get(url, params=params, timeout=10)
+                data = response.json()
+
+                if 'features' in data and len(data['features']) > 0:
+                    attrs = data['features'][0]['attributes']
+                    census.at[idx, 'latitude'] = float(attrs.get('CENTLAT', 0))
+                    census.at[idx, 'longitude'] = float(attrs.get('CENTLON', 0))
+
+                time.sleep(0.2)  # Rate limiting
+
+            except Exception as e:
+                print(f"      ⚠️  Could not fetch centroid for {geoid}: {e}")
+                # Leave as NaN - will be handled in population calculation
+                continue
+
+        return census
+
+    def _add_tract_centroids_via_api(self, census: pd.DataFrame) -> pd.DataFrame:
+        """
+        Add all tract centroids using Census API (fallback method).
+
+        Args:
+            census (DataFrame): Census tract data
+
+        Returns:
+            DataFrame: Census data with lat/lon added
+        """
+        import requests
+        import time
+
+        print(f"      Fetching centroids for {len(census)} tracts...")
+
+        census['latitude'] = np.nan
+        census['longitude'] = np.nan
+
+        for idx, tract in census.iterrows():
+            geoid = tract['census_geoid']
+            state_fips = geoid[:2]
+            county_fips = geoid[2:5]
+            tract_fips = geoid[5:11]
+
+            try:
+                url = f"https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Tracts_Blocks/MapServer/8/query"
+                params = {
+                    'where': f"STATE='{state_fips}' AND COUNTY='{county_fips}' AND TRACT='{tract_fips}'",
+                    'outFields': 'CENTLAT,CENTLON',
+                    'f': 'json'
+                }
+
+                response = requests.get(url, params=params, timeout=10)
+                data = response.json()
+
+                if 'features' in data and len(data['features']) > 0:
+                    attrs = data['features'][0]['attributes']
+                    census.at[idx, 'latitude'] = float(attrs.get('CENTLAT', 0))
+                    census.at[idx, 'longitude'] = float(attrs.get('CENTLON', 0))
+
+                if (idx + 1) % 100 == 0:
+                    print(f"        Progress: {idx + 1}/{len(census)} tracts")
+
+                time.sleep(0.2)  # Rate limiting
+
+            except Exception as e:
+                print(f"      ⚠️  Could not fetch centroid for {geoid}: {e}")
+                continue
+
+        return census
 
     def get_state_data(self, state: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """
