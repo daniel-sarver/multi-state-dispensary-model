@@ -25,6 +25,7 @@ from src.prediction.feature_validator import FeatureValidator
 from src.feature_engineering.data_loader import MultiStateDataLoader
 from src.feature_engineering.coordinate_calculator import CoordinateFeatureCalculator
 from src.feature_engineering.exceptions import DataNotFoundError, InvalidStateError
+from src.reporting.report_generator import ReportGenerator
 
 
 class TerminalInterface:
@@ -83,7 +84,7 @@ class TerminalInterface:
     def select_mode(self) -> str:
         """Let user choose operating mode."""
         print("\nSelect Mode:")
-        print("  [1] Single Site Analysis (Interactive)")
+        print("  [1] Site Analysis (Interactive - up to 5 sites)")
         print("  [2] Batch Analysis (CSV Input)")
         print("  [3] Model Information")
         print("  [4] Exit")
@@ -103,90 +104,187 @@ class TerminalInterface:
                 print("❌ Invalid choice. Please enter 1-4.")
 
     def run_single_site_analysis(self):
-        """Interactive single-site prediction with automatic feature calculation."""
+        """Interactive multi-site prediction with automatic feature calculation."""
         print("\n" + "=" * 70)
-        print("SINGLE SITE ANALYSIS".center(70))
+        print("SITE ANALYSIS".center(70))
         print("=" * 70)
+        print("\nYou can analyze up to 5 sites in one session.")
 
-        # Get state
-        state = self.prompt_state()
-        if state is None:
+        all_results = []
+        site_count = 1
+        max_sites = 5
+
+        while site_count <= max_sites:
+            print("\n" + "=" * 70)
+            print(f"SITE {site_count}".center(70))
+            print("=" * 70)
+
+            # Get state
+            state = self.prompt_state()
+            if state is None:
+                if site_count == 1:
+                    print("\n⚠️  Analysis cancelled")
+                    return
+                else:
+                    break
+
+            print(f"\n📍 State: {state}")
+
+            # Get coordinates and optional sq_ft (simplified input)
+            coords = self.prompt_coordinates_only(state)
+            if coords is None:
+                if site_count == 1:
+                    print("\n⚠️  Analysis cancelled")
+                    return
+                else:
+                    break
+
+            # AUTO-CALCULATE all features from coordinates
+            print("\n🔄 Calculating features from coordinates...")
+            print("  • Identifying census tract")
+            print("  • Calculating multi-radius populations")
+            print("  • Analyzing competition")
+            print("  • Extracting demographics")
+
+            try:
+                base_features = self.calculator.calculate_all_features(
+                    state,
+                    coords['latitude'],
+                    coords['longitude'],
+                    coords.get('sq_ft')
+                )
+
+                print("✅ Features calculated successfully")
+                print(f"  • Population (5mi): {base_features['pop_5mi']:,}")
+                print(f"  • Competitors (5mi): {base_features['competitors_5mi']}")
+                print(f"  • Census tract: {base_features.get('census_geoid', 'N/A')}")
+
+            except DataNotFoundError as e:
+                print(f"\n❌ DATA ERROR: {e}")
+                print("  Cannot proceed without required data.")
+                print("  Skipping this site...")
+
+                # Ask if they want to try another site
+                if site_count < max_sites:
+                    retry = input("\n> Add another site? (y/n): ").strip().lower()
+                    if retry == 'y':
+                        site_count += 1
+                        continue
+                break
+
+            except InvalidStateError as e:
+                print(f"\n❌ INVALID STATE: {e}")
+                print("  Skipping this site...")
+
+                # Ask if they want to try another site
+                if site_count < max_sites:
+                    retry = input("\n> Add another site? (y/n): ").strip().lower()
+                    if retry == 'y':
+                        site_count += 1
+                        continue
+                break
+
+            except Exception as e:
+                print(f"\n❌ CALCULATION ERROR: {e}")
+                import traceback
+                traceback.print_exc()
+                print("  Skipping this site...")
+
+                # Ask if they want to try another site
+                if site_count < max_sites:
+                    retry = input("\n> Add another site? (y/n): ").strip().lower()
+                    if retry == 'y':
+                        site_count += 1
+                        continue
+                break
+
+            # Validate and generate derived features
+            print("\n🔄 Validating inputs and generating derived features...")
+            try:
+                complete_features = self.validator.prepare_features(
+                    base_features, state
+                )
+                print("✅ All inputs valid - 44 features generated")
+            except ValueError as e:
+                print(f"\n❌ Validation Error: {e}")
+                print("  Skipping this site...")
+
+                # Ask if they want to try another site
+                if site_count < max_sites:
+                    retry = input("\n> Add another site? (y/n): ").strip().lower()
+                    if retry == 'y':
+                        site_count += 1
+                        continue
+                break
+
+            # Generate prediction
+            print("🔄 Generating prediction with confidence intervals...")
+            try:
+                result = self.predictor.predict_with_confidence(
+                    complete_features,
+                    confidence=0.95,
+                    method='normal'
+                )
+
+                # Get top drivers
+                top_drivers = self.predictor.get_top_drivers(
+                    complete_features, n=5
+                )
+
+                # Store result for later comparison
+                analysis_result = self._prepare_result_dict(
+                    state, coords, base_features, result
+                )
+                analysis_result['site_number'] = site_count
+                analysis_result['top_drivers'] = top_drivers
+                all_results.append(analysis_result)
+
+                # Show quick summary for this site
+                print(f"\n✅ Site {site_count} Analysis Complete")
+                print(f"   Predicted Annual Visits: {result['prediction']:,.0f}")
+                print(f"   95% CI: {result['ci_lower']:,.0f} - {result['ci_upper']:,.0f}")
+
+            except Exception as e:
+                print(f"\n❌ Prediction Error: {e}")
+                import traceback
+                traceback.print_exc()
+                print("  Skipping this site...")
+
+                # Ask if they want to try another site
+                if site_count < max_sites:
+                    retry = input("\n> Add another site? (y/n): ").strip().lower()
+                    if retry == 'y':
+                        site_count += 1
+                        continue
+                break
+
+            # Ask if they want to add another site (if not at max)
+            if site_count < max_sites:
+                print("\n" + "-" * 70)
+                add_another = input(f"\n> Add another site? (y/n, {max_sites - site_count} remaining): ").strip().lower()
+                if add_another != 'y':
+                    break
+                site_count += 1
+            else:
+                print(f"\n✅ Maximum of {max_sites} sites reached")
+                break
+
+        # If no successful analyses, exit
+        if not all_results:
+            print("\n⚠️  No sites were successfully analyzed")
             return
 
-        print(f"\n📍 State: {state}")
+        # Display comparison summary for all sites
+        self._print_multi_site_summary(all_results)
 
-        # Get coordinates and optional sq_ft (simplified input)
-        coords = self.prompt_coordinates_only(state)
-        if coords is None:
-            print("\n⚠️  Analysis cancelled")
-            return
+        # Ask user if they want to generate detailed reports
+        print("\n" + "-" * 70)
+        save_reports = input("\n> Generate detailed reports (HTML/CSV/TXT)? (y/n): ").strip().lower()
 
-        # AUTO-CALCULATE all features from coordinates
-        print("\n🔄 Calculating features from coordinates...")
-        print("  • Identifying census tract")
-        print("  • Calculating multi-radius populations")
-        print("  • Analyzing competition")
-        print("  • Extracting demographics")
-
-        try:
-            base_features = self.calculator.calculate_all_features(
-                state,
-                coords['latitude'],
-                coords['longitude'],
-                coords.get('sq_ft')
-            )
-
-            print("✅ Features calculated successfully")
-            print(f"  • Population (5mi): {base_features['pop_5mi']:,}")
-            print(f"  • Competitors (5mi): {base_features['competitors_5mi']}")
-            print(f"  • Census tract: {base_features.get('census_geoid', 'N/A')}")
-
-        except DataNotFoundError as e:
-            print(f"\n❌ DATA ERROR: {e}")
-            print("  Cannot proceed without required data.")
-            return
-        except InvalidStateError as e:
-            print(f"\n❌ INVALID STATE: {e}")
-            return
-        except Exception as e:
-            print(f"\n❌ CALCULATION ERROR: {e}")
-            import traceback
-            traceback.print_exc()
-            return
-
-        # Validate and generate derived features
-        print("\n🔄 Validating inputs and generating derived features...")
-        try:
-            complete_features = self.validator.prepare_features(
-                base_features, state
-            )
-            print("✅ All inputs valid - 44 features generated")
-        except ValueError as e:
-            print(f"\n❌ Validation Error: {e}")
-            return
-
-        # Generate prediction
-        print("🔄 Generating prediction with confidence intervals...")
-        try:
-            result = self.predictor.predict_with_confidence(
-                complete_features,
-                confidence=0.95,
-                method='normal'
-            )
-
-            # Get top drivers
-            top_drivers = self.predictor.get_top_drivers(
-                complete_features, n=5
-            )
-
-            # Pretty-print results
-            self.print_results(state, base_features, result, top_drivers)
-
-        except Exception as e:
-            print(f"\n❌ Prediction Error: {e}")
-            import traceback
-            traceback.print_exc()
-            return
+        if save_reports == 'y':
+            # Generate comprehensive reports
+            report_gen = ReportGenerator(self.predictor.get_model_info())
+            report_gen.generate_reports(all_results)
 
     def run_batch_analysis(self):
         """Batch prediction from CSV file."""
@@ -273,13 +371,13 @@ class TerminalInterface:
                     'error': str(e)
                 })
 
-        # Save results
+        # Save CSV results
         results_df = pd.DataFrame(results)
         output_path = csv_path.replace('.csv', '_predictions.csv')
         results_df.to_csv(output_path, index=False)
 
         print(f"\n✅ Batch processing complete!")
-        print(f"📊 Results saved to: {output_path}")
+        print(f"📊 CSV Results saved to: {output_path}")
 
         # Show summary
         successful = len([r for r in results if 'error' not in r])
@@ -291,6 +389,18 @@ class TerminalInterface:
         if successful > 0:
             avg_pred = results_df[results_df['predicted_visits'].notna()]['predicted_visits'].mean()
             print(f"  Avg Prediction:  {avg_pred:,.0f} visits/year")
+
+            # Ask if user wants comprehensive reports
+            print("\n" + "-" * 70)
+            generate_reports = input("\n> Generate comprehensive reports (HTML/CSV/TXT)? (y/n): ").strip().lower()
+
+            if generate_reports == 'y':
+                # Filter successful results for report generation
+                successful_results = [r for r in results if 'error' not in r]
+
+                # Generate comprehensive reports
+                report_gen = ReportGenerator(self.predictor.get_model_info())
+                report_gen.generate_reports(successful_results)
 
     def show_model_info(self):
         """Display detailed model information."""
@@ -697,6 +807,99 @@ class TerminalInterface:
             contribution = top_row['contribution']
             print(f"\n  Key factor: {feature_name} is the")
             print(f"  strongest driver ({contribution:+,.0f} visits impact).")
+
+        print("\n" + "=" * 70)
+
+    def _prepare_result_dict(
+        self,
+        state: str,
+        coords: Dict[str, Any],
+        base_features: Dict[str, Any],
+        result: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Prepare result dictionary for report generator.
+
+        Combines coordinates, base features, and prediction results
+        into the format expected by ReportGenerator.
+        """
+        # Calculate confidence level
+        ci_range = result['ci_upper'] - result['ci_lower']
+        if ci_range < 50000:
+            conf_level = "HIGH"
+        elif ci_range < 100000:
+            conf_level = "MODERATE"
+        else:
+            conf_level = "LOW"
+
+        # Merge all data
+        result_dict = {
+            'state': state,
+            'latitude': coords['latitude'],
+            'longitude': coords['longitude'],
+            'predicted_visits': result['prediction'],
+            'ci_lower': result['ci_lower'],
+            'ci_upper': result['ci_upper'],
+            'confidence_level': conf_level,
+            **base_features  # Include all base features
+        }
+
+        return result_dict
+
+    def _print_multi_site_summary(self, results: List[Dict[str, Any]]):
+        """
+        Print comparison summary for multiple sites.
+
+        Args:
+            results: List of analysis results with predictions
+        """
+        print("\n" + "=" * 70)
+        print("MULTI-SITE COMPARISON SUMMARY".center(70))
+        print("=" * 70)
+
+        # Sort by predicted visits (highest first)
+        sorted_results = sorted(
+            results,
+            key=lambda x: x['predicted_visits'],
+            reverse=True
+        )
+
+        # Assign rankings
+        for rank, result in enumerate(sorted_results, 1):
+            result['rank'] = rank
+
+        # Print header
+        print(f"\n{'Rank':<6} {'Site':<6} {'State':<7} {'Coordinates':<25} {'Predicted Visits':<20} {'Confidence':<12}")
+        print("-" * 70)
+
+        # Print each site
+        for result in sorted_results:
+            site_num = result.get('site_number', result['rank'])
+            coords_str = f"{result['latitude']:.4f}, {result['longitude']:.4f}"
+            visits_str = f"{result['predicted_visits']:,.0f}"
+            conf = result['confidence_level']
+
+            print(f"#{result['rank']:<5} Site {site_num:<2} {result['state']:<7} {coords_str:<25} {visits_str:<20} {conf:<12}")
+
+        # Print statistics
+        print("\n" + "-" * 70)
+        print("Summary Statistics:")
+        avg_visits = sum(r['predicted_visits'] for r in results) / len(results)
+        max_visits = max(r['predicted_visits'] for r in results)
+        min_visits = min(r['predicted_visits'] for r in results)
+
+        print(f"  Total Sites Analyzed:  {len(results)}")
+        print(f"  Average Prediction:    {avg_visits:,.0f} visits/year")
+        print(f"  Range:                 {min_visits:,.0f} - {max_visits:,.0f} visits/year")
+        print(f"  Spread:                {max_visits - min_visits:,.0f} visits/year")
+
+        # Show best site details
+        best_site = sorted_results[0]
+        print(f"\n🏆 Best Performing Site:")
+        print(f"  Site {best_site.get('site_number', 1)} ({best_site['state']})")
+        print(f"  Predicted Visits: {best_site['predicted_visits']:,.0f}")
+        print(f"  Population (5mi): {best_site['pop_5mi']:,.0f}")
+        print(f"  Competitors (5mi): {best_site['competitors_5mi']}")
 
         print("\n" + "=" * 70)
 

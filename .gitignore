@@ -79,6 +79,7 @@ data/census/intermediate/*.csv
 
 # Output files
 site_analysis_results/
+site_reports/
 *.html
 *.png
 *.jpg

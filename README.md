@@ -14,8 +14,9 @@ This project enhances the successful PA Dispensary Model (v3.1) by:
 
 ## Quick Start
 
-**Status**: Phase 6 Complete - Model v2 Production Ready ✅
-**CLI Automation**: Phase 3 Complete - Coordinate-Based Input (3-4 inputs) ✅
+**Status**: Production Ready ✅
+**CLI Automation**: Complete - Coordinate-Based Input with Report Generation ✅
+**Multi-Site Analysis**: Up to 5 sites per session ✅
 
 ```bash
 # Navigate to project directory
@@ -34,16 +35,22 @@ python3 -c "import pandas as pd; df = pd.read_csv('data/processed/combined_with_
 # Train model v2 with corrected data
 python3 src/modeling/train_multi_state_model.py
 
-# Run terminal interface with coordinate-based input (Phase 3 complete)
+# Run terminal interface - MULTI-SITE ANALYSIS with REPORTS
 python3 src/terminal/cli.py
-# → Select Florida or Pennsylvania
-# → Enter coordinates (e.g., 28.5685, -81.2163)
-# → Optional: Enter square footage (or press Enter for state median)
-# → Get prediction automatically!
+# → Select [1] Site Analysis (Interactive - up to 5 sites)
+# → For each site:
+#    • Select Florida or Pennsylvania
+#    • Enter coordinates (e.g., 28.5685, -81.2163)
+#    • Enter square footage (or press Enter for state median)
+#    • Choose to add another site (up to 5 total)
+# → Review multi-site comparison summary
+# → Generate comprehensive reports (HTML/CSV/TXT/JSON)
+# → Reports saved to site_reports/ with timestamp
 
-# Test CLI automation (all phases complete)
-python3 tests/test_data_loader.py  # Phase 1: Data loader
-python3 test_cli_phase3.py         # Phase 3: End-to-end integration
+# Test the system
+python3 tests/test_data_loader.py  # Data loader
+python3 test_reports.py            # Report generation
+python3 test_multisite.py          # Multi-site workflow
 ```
 
 ## Model Architecture
@@ -75,20 +82,52 @@ multi-state-dispensary-model/
 │   ├── census/                 # Census tract shapefiles & cache
 │   └── models/                 # Trained model artifacts
 ├── src/
-│   ├── data_integration/       # Phase 1: Placer + Regulator merging ✅
-│   ├── feature_engineering/    # Phase 2: Census demographics (in progress)
-│   ├── modeling/               # Phase 3: Model training (planned)
-│   └── reporting/              # Phase 4: Terminal interface (planned)
+│   ├── data_integration/       # Placer + Regulator merging ✅
+│   ├── feature_engineering/    # Census demographics & coordinate calculator ✅
+│   ├── modeling/               # Model training & prediction ✅
+│   ├── terminal/               # Interactive CLI interface ✅
+│   ├── prediction/             # Feature validation & prediction ✅
+│   └── reporting/              # Report generation (HTML/CSV/TXT/JSON) ✅
+├── site_reports/               # Generated analysis reports (timestamped folders)
 ├── sandbox/                    # Experimentation area
 ├── tests/                      # Data validation + model tests
 ├── docs/                       # Methodology, findings, architecture
 │   ├── PHASE1_COMPLETION_REPORT.md
 │   ├── PHASE2_ARCHITECTURE.md
 │   └── archive/                # Historical planning documents
+├── test_reports.py             # Report generation test
+├── test_multisite.py           # Multi-site workflow test
+├── REPORT_GENERATION_COMPLETE.md     # Report features documentation
+├── MULTISITE_FEATURE_COMPLETE.md     # Multi-site features documentation
+├── SESSION_SUMMARY_OCT_24_2025.md    # Latest session summary
 ├── .env.example                # Environment variable template
 ├── .gitignore                  # Protects credentials & data
 └── requirements.txt            # Python dependencies
 ```
+
+## Key Features
+
+### Interactive Multi-Site Analysis ✨
+- **Analyze up to 5 sites** in a single session
+- **Coordinate-based input** - Only 3-4 inputs required (state, lat, lon, sq ft)
+- **Automatic feature calculation** - All 23 base features + 21 derived features generated from coordinates
+- **Multi-site comparison** - Side-by-side ranking with performance statistics
+- **Real-time feedback** - Quick summary after each site
+
+### Comprehensive Report Generation 📊
+- **Professional HTML reports** with embedded performance charts
+- **CSV data exports** for spreadsheet analysis
+- **Text summaries** for quick reference
+- **JSON run receipts** for tracking and auditing
+- **State-specific branding** (FL: Orange/Blue, PA: Teal/Navy)
+- **Timestamped folders** with all report formats
+
+### Production-Ready Interface 🚀
+- **User-friendly terminal CLI** with clear prompts
+- **Robust error handling** with retry options
+- **Progress indicators** for long-running operations
+- **Confidence intervals** (95% CI with normal approximation)
+- **Feature drivers** showing top contributing factors
 
 ## Development Principles
 
@@ -214,6 +253,22 @@ multi-state-dispensary-model/
 - **Deliverables**: Updated `cli.py`, `test_cli_phase3.py`, Phase 3 documentation
 - **Validation**: Tested with Insa Orlando (prediction: 32,849 vs actual ~31,360) ✅
 
+### Report Generation & Multi-Site Analysis ✅ COMPLETE
+- ✅ Created comprehensive report generator module (`ReportGenerator` class, 600+ lines)
+- ✅ Professional HTML reports with embedded performance charts (base64-encoded)
+- ✅ CSV data exports with all metrics
+- ✅ Text summaries for quick reference
+- ✅ JSON run receipts for tracking
+- ✅ State-specific branding (FL: Orange/Blue, PA: Teal/Navy)
+- ✅ Enhanced CLI to support up to 5 sites per session
+- ✅ Multi-site comparison summary with rankings and statistics
+- ✅ Interactive prompts: "Add another site? (y/n, X remaining)"
+- ✅ Error handling with retry options for failed sites
+- ✅ All sites included in single comprehensive report
+- **Result**: Complete site comparison platform with professional reporting
+- **Deliverables**: `report_generator.py`, enhanced `cli.py`, `test_reports.py`, `test_multisite.py`, comprehensive documentation
+- **Validation**: Tested with 3-5 PA sites, reports generated successfully ✅
+
 
 ## Key Achievements
 
@@ -279,4 +334,4 @@ See [docs/README.md](docs/README.md) for complete documentation index.
 *Building on the foundation of the PA Dispensary Model v3.1 to create the next generation of dispensary site analysis tools.*
 
 **GitHub**: https://github.com/daniel-sarver/multi-state-dispensary-model
-**Last Updated**: October 24, 2025 (CLI Automation Phase 3 Complete - Coordinate-Based Input)
+**Last Updated**: October 24, 2025 (Report Generation & Multi-Site Analysis Complete - Production Ready)
