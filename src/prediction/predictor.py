@@ -5,12 +5,14 @@ This module provides the core prediction functionality for the Multi-State
 Dispensary Model, loading the trained model artifact and generating visit
 predictions with confidence intervals.
 
-Model Details:
-- Ridge Regression with Pipeline (StandardScaler + Ridge)
-- Trained on 592 dispensaries (FL & PA)
-- 44 engineered features
-- R² = 0.1940 (test set)
-- Alpha = 1000
+Model Versions:
+- v2 (unified): Ridge Regression trained on 741 FL+PA dispensaries (R² = 0.19 overall)
+- v3 (state-specific): Separate optimized models for within-state comparisons
+  - FL model: Ridge with 31 features (within-state R² = 0.0685)
+  - PA model: Random Forest with 31 features (within-state R² = 0.0756)
+
+The predictor automatically routes to the appropriate state-specific model when
+state parameter is provided, or uses the unified model when state is None.
 """
 
 import pickle
@@ -31,15 +33,41 @@ class MultiStatePredictor:
     - Feature contribution analysis
     """
 
-    def __init__(self, model_path: str = 'data/models/multi_state_model_v2.pkl'):
+    def __init__(self, model_path: str = None, state: str = None, model_version: str = 'v3'):
         """
         Initialize predictor and load model artifact.
 
         Parameters
         ----------
-        model_path : str
-            Path to pickled model artifact (default: data/models/multi_state_model_v2.pkl)
+        model_path : str, optional
+            Path to pickled model artifact. If None, automatically selects based on state and version.
+        state : str, optional
+            State for prediction ('FL' or 'PA'). If provided with model_version='v3', loads state-specific model.
+            If None, loads unified multi-state model (v2).
+        model_version : str, optional
+            Model version to use: 'v2' (unified) or 'v3' (state-specific). Default: 'v3'
+
+        Notes
+        -----
+        Automatic Model Selection (when model_path is None):
+        - If state='FL' and model_version='v3': loads fl_model_v3.pkl (within-state R²=0.0685)
+        - If state='PA' and model_version='v3': loads pa_model_v3.pkl (within-state R²=0.0756)
+        - If state=None or model_version='v2': loads multi_state_model_v2.pkl (overall R²=0.19)
         """
+        self.state = state
+        self.model_version = model_version
+
+        # Auto-select model path based on state and version
+        if model_path is None:
+            if model_version == 'v3' and state in ['FL', 'PA']:
+                # Use state-specific v3 models for within-state comparisons
+                state_lower = state.lower()
+                model_path = f'data/models/{state_lower}_model_v3.pkl'
+            else:
+                # Default to unified v2 model
+                model_path = 'data/models/multi_state_model_v2.pkl'
+                self.model_version = 'v2'  # Force v2 if state-specific not available
+
         self.model_path = Path(model_path)
         self.pipeline = None
         self.feature_names = None
@@ -52,6 +80,8 @@ class MultiStatePredictor:
     def load_model(self) -> None:
         """
         Load model artifact from pickle file.
+
+        Handles both v2 (unified) and v3 (state-specific) model formats.
 
         Raises
         ------
@@ -70,16 +100,30 @@ class MultiStatePredictor:
             with open(self.model_path, 'rb') as f:
                 model_artifact = pickle.load(f)
 
-            # Extract components
-            self.pipeline = model_artifact['model']  # Pipeline: StandardScaler + Ridge
+            # Extract components (works for both v2 and v3)
+            self.pipeline = model_artifact['model']  # Pipeline: StandardScaler + Ridge/RF/XGBoost
             self.feature_names = model_artifact['feature_names']
-            self.best_alpha = model_artifact['best_alpha']
             self.training_date = model_artifact['training_date']
             self.model_metadata = model_artifact
 
+            # v3 models don't have best_alpha (might be Random Forest or XGBoost)
+            self.best_alpha = model_artifact.get('best_alpha', None)
+
+            # Get model info for logging
+            model_version = model_artifact.get('model_version', 'v2')
+            algorithm = model_artifact.get('algorithm', 'ridge')
+            cv_r2 = model_artifact.get('cv_r2', None)
+
             print(f"✅ Model loaded successfully")
+            print(f"   Version: {model_version}")
+            if self.state:
+                print(f"   State: {self.state}")
+            print(f"   Algorithm: {algorithm}")
             print(f"   Features: {len(self.feature_names)}")
-            print(f"   Alpha: {self.best_alpha}")
+            if self.best_alpha:
+                print(f"   Alpha: {self.best_alpha}")
+            if cv_r2:
+                print(f"   CV R²: {cv_r2:.4f}")
             print(f"   Trained: {self.training_date}")
 
         except Exception as e:
@@ -213,21 +257,40 @@ class MultiStatePredictor:
         if is_pa not in [0, 1]:
             raise ValueError(f"is_PA must be 0 or 1, got: {is_pa}")
 
-        training_report = self.model_metadata['training_report']
+        # Get RMSE - handle both v2 (with training_report) and v3 (state-specific) models
+        if 'training_report' in self.model_metadata:
+            # v2 model with full training report
+            training_report = self.model_metadata['training_report']
 
-        if is_fl == 1:
-            rmse = training_report['state_performance']['florida']['rmse']
-            mean_visits = training_report['state_performance']['florida']['mean_actual_visits']
-            state_label = 'FL'
-        elif is_pa == 1:
-            rmse = training_report['state_performance']['pennsylvania']['rmse']
-            mean_visits = training_report['state_performance']['pennsylvania']['mean_actual_visits']
-            state_label = 'PA'
+            if is_fl == 1:
+                rmse = training_report['state_performance']['florida']['rmse']
+                mean_visits = training_report['state_performance']['florida']['mean_actual_visits']
+                state_label = 'FL'
+            elif is_pa == 1:
+                rmse = training_report['state_performance']['pennsylvania']['rmse']
+                mean_visits = training_report['state_performance']['pennsylvania']['mean_actual_visits']
+                state_label = 'PA'
+            else:
+                # Use overall test RMSE if state unknown (both indicators 0)
+                rmse = training_report['test_set']['rmse']
+                mean_visits = training_report['test_set']['mean_actual_visits']
+                state_label = 'overall'
         else:
-            # Use overall test RMSE if state unknown (both indicators 0)
-            rmse = training_report['test_set']['rmse']
-            mean_visits = training_report['test_set']['mean_actual_visits']
-            state_label = 'overall'
+            # v3 state-specific model - use default RMSE estimates
+            # These are approximations based on training results
+            if is_fl == 1 or self.state == 'FL':
+                rmse = 18270  # FL state RMSE from v2
+                mean_visits = 31142  # FL median from training data
+                state_label = 'FL'
+            elif is_pa == 1 or self.state == 'PA':
+                rmse = 30854  # PA state RMSE from v2
+                mean_visits = 52118  # PA median from training data
+                state_label = 'PA'
+            else:
+                # Fallback to overall
+                rmse = 21407  # Overall test RMSE from v2
+                mean_visits = 37000  # Approximate overall mean
+                state_label = 'overall'
 
         if method == 'normal':
             # Fast normal approximation with prediction-proportional scaling
@@ -359,10 +422,10 @@ class MultiStatePredictor:
 
     def get_feature_contributions(self, features_dict: Dict[str, float]) -> pd.DataFrame:
         """
-        Calculate feature contributions to prediction for this specific site.
+        Calculate feature contributions/importances for this site.
 
-        This shows which features are driving the prediction up or down
-        compared to the mean prediction.
+        For Ridge regression: Shows coefficient-based contributions
+        For tree-based models (RF, XGBoost): Shows feature importances
 
         Parameters
         ----------
@@ -372,16 +435,13 @@ class MultiStatePredictor:
         Returns
         -------
         pd.DataFrame
-            DataFrame with columns: feature, value, coefficient, contribution
-            Sorted by absolute contribution (most impactful first)
+            DataFrame with columns: feature, value, importance/coefficient, contribution/importance
+            Sorted by absolute importance (most impactful first)
 
         Notes
         -----
-        Contribution = coefficient * (standardized_feature_value)
-
-        For Ridge regression in a Pipeline:
-        - Coefficients are for standardized features
-        - Need to standardize input features first
+        - Ridge: Contribution = coefficient * (standardized_feature_value)
+        - Tree-based: Uses built-in feature_importances_ (not site-specific)
         """
         # Validate features
         is_valid, missing = self.validate_features(features_dict)
@@ -394,40 +454,74 @@ class MultiStatePredictor:
             columns=self.feature_names
         )
 
-        # Get standardized features (Pipeline's scaler)
-        scaler = self.pipeline.named_steps['scaler']
-        X_scaled = scaler.transform(X)
+        # Determine algorithm type from pipeline
+        # v3 models: pipeline has 'model' step, v2 models: pipeline has 'ridge' step
+        if 'model' in self.pipeline.named_steps:
+            model = self.pipeline.named_steps['model']
+        elif 'ridge' in self.pipeline.named_steps:
+            model = self.pipeline.named_steps['ridge']
+        else:
+            raise ValueError("Unknown pipeline structure - no 'model' or 'ridge' step found")
 
-        # Get Ridge coefficients
-        ridge = self.pipeline.named_steps['ridge']
-        coefficients = ridge.coef_
-        intercept = ridge.intercept_
+        # Get algorithm name
+        algorithm = self.model_metadata.get('algorithm', 'ridge')
 
-        # Calculate contributions
-        contributions = X_scaled[0] * coefficients
+        # Handle based on algorithm type
+        if algorithm == 'ridge' or hasattr(model, 'coef_'):
+            # Ridge regression - coefficient-based contributions
+            scaler = self.pipeline.named_steps['scaler']
+            X_scaled = scaler.transform(X)
 
-        # Create DataFrame
-        df = pd.DataFrame({
-            'feature': self.feature_names,
-            'value': [features_dict[fname] for fname in self.feature_names],
-            'coefficient': coefficients,
-            'contribution': contributions
-        })
+            coefficients = model.coef_
+            intercept = model.intercept_
 
-        # Add intercept row
-        intercept_row = pd.DataFrame({
-            'feature': ['intercept'],
-            'value': [1.0],
-            'coefficient': [intercept],
-            'contribution': [intercept]
-        })
+            # Calculate contributions
+            contributions = X_scaled[0] * coefficients
 
-        df = pd.concat([intercept_row, df], ignore_index=True)
+            # Create DataFrame
+            df = pd.DataFrame({
+                'feature': self.feature_names,
+                'value': [features_dict[fname] for fname in self.feature_names],
+                'coefficient': coefficients,
+                'contribution': contributions
+            })
 
-        # Sort by absolute contribution
-        df['abs_contribution'] = df['contribution'].abs()
-        df = df.sort_values('abs_contribution', ascending=False)
-        df = df.drop('abs_contribution', axis=1)
+            # Add intercept row
+            intercept_row = pd.DataFrame({
+                'feature': ['intercept'],
+                'value': [1.0],
+                'coefficient': [intercept],
+                'contribution': [intercept]
+            })
+
+            df = pd.concat([intercept_row, df], ignore_index=True)
+
+            # Sort by absolute contribution
+            df['abs_contribution'] = df['contribution'].abs()
+            df = df.sort_values('abs_contribution', ascending=False)
+            df = df.drop('abs_contribution', axis=1)
+
+        elif hasattr(model, 'feature_importances_'):
+            # Tree-based model (Random Forest, XGBoost) - use feature importances
+            importances = model.feature_importances_
+
+            # Create DataFrame (no intercept for tree models)
+            df = pd.DataFrame({
+                'feature': self.feature_names,
+                'value': [features_dict[fname] for fname in self.feature_names],
+                'importance': importances,
+                'contribution': importances  # Use importance as proxy for contribution
+            })
+
+            # Sort by importance
+            df = df.sort_values('importance', ascending=False)
+
+        else:
+            # Unknown model type
+            raise ValueError(
+                f"Model type '{algorithm}' does not support feature contributions. "
+                f"Supported: Ridge (coefficients), RandomForest/XGBoost (importances)"
+            )
 
         return df
 
@@ -518,41 +612,67 @@ class MultiStatePredictor:
 
     def get_model_info(self) -> Dict:
         """
-        Get model metadata and performance information from training report.
+        Get model metadata and performance information.
+
+        Handles both v2 (unified with full training report) and v3 (state-specific) models.
 
         Returns
         -------
         dict
             Model metadata including performance metrics
         """
-        training_report = self.model_metadata['training_report']
-
-        # Get improvement factor from metadata (or compute if not available)
-        improvement_factor = training_report.get('metadata', {}).get('improvement_factor', None)
-        if improvement_factor is not None:
-            improvement_str = f"{improvement_factor:.2f}x"
-        else:
-            # Fallback: compute from baseline if metadata missing
-            baseline_r2 = training_report.get('metadata', {}).get('baseline_r2', 0.0716)
-            cv_r2 = training_report['cross_validation']['r2_mean']
-            improvement_factor = cv_r2 / baseline_r2
-            improvement_str = f"{improvement_factor:.2f}x"
-
-        return {
+        info = {
             'model_path': str(self.model_path),
             'training_date': self.training_date,
             'n_features': len(self.feature_names),
-            'alpha': self.best_alpha,
-            'test_r2': training_report['test_set']['r2'],
-            'test_rmse': training_report['test_set']['rmse'],
-            'cv_r2_mean': training_report['cross_validation']['r2_mean'],
-            'cv_r2_std': training_report['cross_validation']['r2_std'],
-            'fl_r2': training_report['state_performance']['florida']['r2'],
-            'fl_rmse': training_report['state_performance']['florida']['rmse'],
-            'pa_r2': training_report['state_performance']['pennsylvania']['r2'],
-            'pa_rmse': training_report['state_performance']['pennsylvania']['rmse'],
-            'improvement_over_baseline': improvement_str
+            'model_version': self.model_metadata.get('model_version', 'v2'),
+            'algorithm': self.model_metadata.get('algorithm', 'ridge')
         }
+
+        # Add alpha if available (Ridge only)
+        if self.best_alpha:
+            info['alpha'] = self.best_alpha
+
+        # v3 state-specific models have simpler structure
+        if info['model_version'] == 'v3':
+            info['state'] = self.model_metadata.get('state', self.state)
+            info['feature_set'] = self.model_metadata.get('feature_set', 'unknown')
+            info['cv_r2'] = self.model_metadata.get('cv_r2', None)
+
+            # Calculate improvement over baseline
+            baseline_r2 = 0.048 if info['state'] == 'FL' else -0.028
+            if info['cv_r2']:
+                improvement = info['cv_r2'] - baseline_r2
+                info['improvement_over_v2_baseline'] = f"+{improvement:.4f}"
+
+        # v2 unified model has full training report
+        elif 'training_report' in self.model_metadata:
+            training_report = self.model_metadata['training_report']
+
+            # Get improvement factor from metadata (or compute if not available)
+            improvement_factor = training_report.get('metadata', {}).get('improvement_factor', None)
+            if improvement_factor is not None:
+                improvement_str = f"{improvement_factor:.2f}x"
+            else:
+                # Fallback: compute from baseline if metadata missing
+                baseline_r2 = training_report.get('metadata', {}).get('baseline_r2', 0.0716)
+                cv_r2 = training_report['cross_validation']['r2_mean']
+                improvement_factor = cv_r2 / baseline_r2
+                improvement_str = f"{improvement_factor:.2f}x"
+
+            info.update({
+                'test_r2': training_report['test_set']['r2'],
+                'test_rmse': training_report['test_set']['rmse'],
+                'cv_r2_mean': training_report['cross_validation']['r2_mean'],
+                'cv_r2_std': training_report['cross_validation']['r2_std'],
+                'fl_r2': training_report['state_performance']['florida']['r2'],
+                'fl_rmse': training_report['state_performance']['florida']['rmse'],
+                'pa_r2': training_report['state_performance']['pennsylvania']['r2'],
+                'pa_rmse': training_report['state_performance']['pennsylvania']['rmse'],
+                'improvement_over_baseline': improvement_str
+            })
+
+        return info
 
 
 def main():

@@ -1,0 +1,23 @@
+====================================================================
+COPY AND PASTE THIS PROMPT AFTER COMPACTING
+====================================================================
+
+Continue work on Multi-State Dispensary Model. We need to build state-specific models (v3.0) to optimize for within-state site comparisons.
+
+**Context**: Diagnostic analysis revealed that model v2's overall R²=0.19 is misleading - it's inflated by between-state differences. Within-state predictive power is very weak (FL: R²=0.048, PA: R²=-0.028). User needs to compare sites WITHIN states (FL vs FL, PA vs PA), not across states.
+
+**Task**: Build separate FL-only and PA-only models with comprehensive feature selection testing (Option 2 - thorough approach, ~2 hours):
+
+1. Test 5 feature combinations per state (full, competition-focused, demographics-focused, best-of-both, minimal)
+2. Test 3 algorithms per combination (Ridge, Random Forest, XGBoost)
+3. Compare within-state R² improvement vs current v2 model
+4. Update CLI to route to correct state model (zero user impact - automatic)
+5. Generate performance comparison report
+
+**Expected outcome**: Empirical evidence on whether separate models improve within-state predictions or if we need better features (AADT integration or operational data).
+
+**Reference**: See docs/CONTINUATION_PROMPT_2025_10_28_WITHIN_STATE_V3.md for full context and implementation plan.
+
+Project directory: /Users/daniel_insa/Claude/multi-state-dispensary-model
+
+====================================================================
