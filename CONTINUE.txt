@@ -2,51 +2,57 @@ Continue work on Multi-State Dispensary Model.
 
 Project Directory: /Users/daniel_insa/Claude/multi-state-dispensary-model
 
-Recent completion (Oct 28, 2025 - Latest):
-✅ CRITICAL BUG FIXES (commit 2f7bfdc)
-- ✅ Fixed HIGH priority: address/AADT dropped in interactive mode
-  - Was collected but never reached reports/summaries
-  - Now flows through: input → coords → results → reports
-- ✅ Fixed MEDIUM priority: address/lat/lon/AADT omitted in batch mode
-  - Input CSV fields were completely ignored
-  - Now preserved in output predictions CSV
-- ✅ All fixes tested and verified (unit tests passing)
-- Issues identified by Codex code review
+🚨 CRITICAL DISCOVERY (Oct 28, 2025 - LATEST):
+✅ WITHIN-STATE PREDICTION ANALYSIS COMPLETE
+- ✅ Diagnostic analysis reveals model v2 overall R²=0.19 is MISLEADING
+- ✅ Overall R² inflated by between-state differences (PA median 67% higher than FL)
+- ✅ Within-state predictive power is VERY WEAK:
+  - Florida: R² = 0.048 (best feature explains only 5.7% of variance)
+  - Pennsylvania: R² = -0.028 (worse than random guessing)
+- ✅ Root cause: Available features (demographics, competition) have almost no signal within states
+- ✅ Full diagnostic report: docs/WITHIN_STATE_PREDICTION_ANALYSIS.md
 
-✅ DATA VALIDATION & UX ENHANCEMENTS (commits 2273a20, 1b14c7a)
-- ✅ Fixed market median benchmarks - now calculated from corrected_visits
-  - FL median corrected: 55k → 31.1k (was 76% too high)
-  - PA median corrected: 65k → 52.1k (was 25% too high)
-- ✅ Confirmed all reports use corrected_visits consistently
-- ✅ Added optional address input to CLI workflow
-- ✅ Added optional AADT (traffic) input to CLI workflow
+KEY INSIGHT:
+User needs to compare sites WITHIN states (FL vs FL, PA vs PA), not ACROSS states.
+Current model is optimized for wrong use case!
+
+NEXT TASK: Build State-Specific Models (v3.0)
+📋 Planned approach:
+1. Train separate FL-only and PA-only Ridge models
+2. Test 5 feature combinations per state (competition-focused, demographics-focused, etc.)
+3. Test alternative algorithms (Random Forest, XGBoost) on best feature sets
+4. Compare within-state R² improvement vs current v2 model
+5. Update CLI to route to correct state model automatically (zero user impact)
+
+Estimated time: 2 hours for thorough feature selection testing
 
 Previous completion (Oct 28, 2025):
-- ✅ Confidence interval improvements implemented (v2.1)
-- ✅ Prediction-proportional RMSE scaling with ±75% cap
-- ✅ Transparent cap notifications in all outputs
-- ✅ Reduced interval width from 222% → 150% of prediction
+✅ CRITICAL BUG FIXES (commit 2f7bfdc)
+- Fixed HIGH priority: address/AADT dropped in interactive mode
+- Fixed MEDIUM priority: address/lat/lon/AADT omitted in batch mode
+- All fixes tested and verified (unit tests passing)
+
+✅ DATA VALIDATION & UX ENHANCEMENTS (commits 2273a20, 1b14c7a)
+- Fixed market median benchmarks - now calculated from corrected_visits
+  - FL median corrected: 55k → 31.1k (was 76% too high)
+  - PA median corrected: 65k → 52.1k (was 25% too high)
+- Added optional address and AADT input to CLI workflow
+
+✅ CONFIDENCE INTERVAL IMPROVEMENTS (v2.1)
+- Prediction-proportional RMSE scaling with ±75% cap
+- Reduced interval width from 222% → 150% of prediction
 
 Current Status:
-- Model v2.1 trained and deployed (R² = 0.1812, improved CIs)
-- CLI fully functional with business-friendly confidence intervals
-- Multi-site analysis and report generation working
-- Census tract auto-fetching operational for all PA/FL locations
-- Market benchmarks accurate (calculated from corrected_visits)
-- Address and AADT inputs available for better site identification
-
-System Ready For:
-- Production use for PA & FL site analysis
-- Client presentations with accurate benchmarks
-- Multi-site comparisons with enhanced identification
-- Professional reports with address/AADT context
+- Model v2.1 trained but NOT SUITABLE for within-state comparisons
+- CLI fully functional (will work unchanged with v3 state-specific models)
+- Diagnostic analysis complete with feature correlation reports
+- Analysis output: analysis_output/state_diagnostics/
 
 Reference Documents:
-- docs/SESSION_SUMMARY_2025_10_28_DATA_VALIDATION_UX.md - Latest changes
-- docs/CONTINUATION_PROMPT_2025_10_28_POST_CI.md - Full context
-- docs/SESSION_SUMMARY_2025_10_28_CI_IMPROVEMENTS.md - CI improvements
-- docs/SESSION_SUMMARY_2025_10_28_CENSUS_TRACT_FIX.md - Census tract fix
-- docs/PHASE6_MODEL_V2_COMPLETE.md - Model v2 details
+- docs/WITHIN_STATE_PREDICTION_ANALYSIS.md - Why v2 fails within states + optimization plan
+- docs/CONTINUATION_PROMPT_2025_10_28_WITHIN_STATE_V3.md - Full continuation context
+- docs/SESSION_SUMMARY_2025_10_28_DATA_VALIDATION_UX.md - Previous session
+- docs/MODEL_PERFORMANCE_EXECUTIVE_SUMMARY.md - Current model performance
 - CLAUDE.md - Project guidelines and context
 
-All requested enhancements complete. System ready for production use.
+READY TO BUILD: State-specific models v3.0 with feature selection optimization.
