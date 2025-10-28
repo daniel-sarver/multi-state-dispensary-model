@@ -3,14 +3,23 @@ Continue work on Multi-State Dispensary Model.
 Project Directory: /Users/daniel_insa/Claude/multi-state-dispensary-model
 
 Recent completion (Oct 28, 2025 - Latest):
-✅ DATA VALIDATION & UX ENHANCEMENTS COMPLETE
+✅ CRITICAL BUG FIXES (commit 2f7bfdc)
+- ✅ Fixed HIGH priority: address/AADT dropped in interactive mode
+  - Was collected but never reached reports/summaries
+  - Now flows through: input → coords → results → reports
+- ✅ Fixed MEDIUM priority: address/lat/lon/AADT omitted in batch mode
+  - Input CSV fields were completely ignored
+  - Now preserved in output predictions CSV
+- ✅ All fixes tested and verified (unit tests passing)
+- Issues identified by Codex code review
+
+✅ DATA VALIDATION & UX ENHANCEMENTS (commits 2273a20, 1b14c7a)
 - ✅ Fixed market median benchmarks - now calculated from corrected_visits
   - FL median corrected: 55k → 31.1k (was 76% too high)
   - PA median corrected: 65k → 52.1k (was 25% too high)
 - ✅ Confirmed all reports use corrected_visits consistently
 - ✅ Added optional address input to CLI workflow
 - ✅ Added optional AADT (traffic) input to CLI workflow
-- ✅ All changes committed and pushed to git (commit 2273a20)
 
 Previous completion (Oct 28, 2025):
 - ✅ Confidence interval improvements implemented (v2.1)
