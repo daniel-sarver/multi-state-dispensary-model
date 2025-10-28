@@ -40,6 +40,7 @@ class ReportGenerator:
         """
         self.model_info = model_info
         self.timestamp = datetime.now()
+        self.state_benchmarks = self._calculate_state_benchmarks()
 
     def generate_reports(
         self,
@@ -513,7 +514,7 @@ class ReportGenerator:
                     <tr>
                         <th>Rank</th>
                         <th>State</th>
-                        <th>Coordinates</th>
+                        <th>Location</th>
                         <th>Annual Visits</th>
                         <th>Population (5mi)</th>
                         <th>Competitors (5mi)</th>
@@ -525,11 +526,13 @@ class ReportGenerator:
 
         for result in results:
             conf_level = result.get('confidence_level', 'MODERATE')
+            # Use address if available, otherwise coordinates
+            location_display = result.get('address', f"{result.get('latitude', 'N/A'):.4f}, {result.get('longitude', 'N/A'):.4f}")
             html += f'''
                     <tr>
                         <td class="ranking-cell">#{result['rank']}</td>
                         <td class="site-name">{result.get('state', 'N/A')}</td>
-                        <td>{result.get('latitude', 'N/A'):.4f}, {result.get('longitude', 'N/A'):.4f}</td>
+                        <td>{location_display}</td>
                         <td>{result.get('predicted_visits', 0):,.0f}</td>
                         <td>{result.get('pop_5mi', 0):,.0f}</td>
                         <td>{result.get('competitors_5mi', 0)}</td>
@@ -562,11 +565,18 @@ class ReportGenerator:
             conf_level = "LOW"
             conf_class = "low"
 
+        # Build site title with address if available
+        site_title = f"Site {result['rank']}"
+        if result.get('address'):
+            site_title += f": {result['address']}"
+        else:
+            site_title += f": {result.get('latitude', 'N/A'):.6f}, {result.get('longitude', 'N/A'):.6f}"
+
         html = f'''
 
         <div class="individual-site-section">
             <div class="rank-header">Rank #{result['rank']} - {result.get('state', 'N/A')}</div>
-            <h2 class="site-title">Site {result['rank']}: {result.get('latitude', 'N/A'):.6f}, {result.get('longitude', 'N/A'):.6f}</h2>
+            <h2 class="site-title">{site_title}</h2>
 
             <div class="site-overview">
                 <div class="prediction-box">
@@ -587,6 +597,40 @@ class ReportGenerator:
                         <div style="margin-top: 10px;">
                             <span class="confidence-indicator {conf_class}">{conf_level} CONFIDENCE</span>
                         </div>
+                    </div>
+                </div>
+
+                <div class="metrics-row">
+                    <div class="metric-box" style="background: #f8f9fa;">
+                        <h3>Site Information</h3>
+                        <div class="metric-item">
+                            <span class="metric-label">State</span>
+                            <span class="metric-value">{result.get('state', 'N/A')}</span>
+                        </div>'''
+
+        # Add address if provided
+        if result.get('address'):
+            html += f'''
+                        <div class="metric-item">
+                            <span class="metric-label">Address</span>
+                            <span class="metric-value">{result['address']}</span>
+                        </div>'''
+
+        html += f'''
+                        <div class="metric-item">
+                            <span class="metric-label">Coordinates</span>
+                            <span class="metric-value">{result.get('latitude', 'N/A'):.6f}, {result.get('longitude', 'N/A'):.6f}</span>
+                        </div>'''
+
+        # Add AADT if provided
+        if result.get('aadt'):
+            html += f'''
+                        <div class="metric-item">
+                            <span class="metric-label">AADT (Traffic)</span>
+                            <span class="metric-value">{result['aadt']:,}</span>
+                        </div>'''
+
+        html += f'''
                     </div>
                 </div>
 
@@ -755,8 +799,10 @@ class ReportGenerator:
             row = {
                 'rank': result.get('rank', 0),
                 'state': result.get('state', ''),
+                'address': result.get('address', ''),
                 'latitude': result.get('latitude', 0),
                 'longitude': result.get('longitude', 0),
+                'aadt': result.get('aadt', ''),
                 'predicted_annual_visits': result.get('predicted_visits', 0),
                 'ci_lower': result.get('ci_lower', 0),
                 'ci_upper': result.get('ci_upper', 0),
@@ -857,21 +903,57 @@ class ReportGenerator:
 
         return receipt_path
 
-    def _get_state_benchmarks(self, state: str) -> Dict[str, Any]:
-        """Get market benchmarks for state."""
-        # These are approximate from the training data
-        benchmarks = {
-            'FL': {
-                'median_visits': 55000,
-                'mean_visits': 60000,
-                'p25_visits': 35000,
-                'p75_visits': 85000
-            },
-            'PA': {
-                'median_visits': 65000,
-                'mean_visits': 70000,
-                'p25_visits': 45000,
-                'p75_visits': 95000
+    def _calculate_state_benchmarks(self) -> Dict[str, Dict[str, float]]:
+        """
+        Calculate actual market benchmarks from corrected_visits training data.
+
+        Returns:
+            Dict with FL and PA benchmarks (median, mean, p25, p75)
+        """
+        try:
+            # Load training data
+            from pathlib import Path
+            project_root = Path(__file__).parent.parent.parent
+            training_file = project_root / "data" / "processed" / "combined_with_competitive_features_corrected.csv"
+
+            df = pd.read_csv(training_file)
+
+            # Filter to training dispensaries only
+            training = df[df['has_placer_data'] == True].copy()
+
+            # Calculate benchmarks by state
+            benchmarks = {}
+            for state in ['FL', 'PA']:
+                state_data = training[training['state'] == state]['corrected_visits']
+
+                benchmarks[state] = {
+                    'median_visits': round(state_data.median(), 0),
+                    'mean_visits': round(state_data.mean(), 0),
+                    'p25_visits': round(state_data.quantile(0.25), 0),
+                    'p75_visits': round(state_data.quantile(0.75), 0)
+                }
+
+            return benchmarks
+
+        except Exception as e:
+            # Fallback to conservative estimates if calculation fails
+            print(f"⚠️  Warning: Could not calculate benchmarks from training data ({e})")
+            print("   Using fallback estimates")
+            return {
+                'FL': {
+                    'median_visits': 31000,
+                    'mean_visits': 34000,
+                    'p25_visits': 20000,
+                    'p75_visits': 45000
+                },
+                'PA': {
+                    'median_visits': 52000,
+                    'mean_visits': 57000,
+                    'p25_visits': 34000,
+                    'p75_visits': 75000
+                }
             }
-        }
-        return benchmarks.get(state, benchmarks['FL'])
+
+    def _get_state_benchmarks(self, state: str) -> Dict[str, Any]:
+        """Get market benchmarks for state from calculated values."""
+        return self.state_benchmarks.get(state, self.state_benchmarks['FL'])

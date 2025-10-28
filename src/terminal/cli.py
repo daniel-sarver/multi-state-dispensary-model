@@ -556,16 +556,16 @@ class TerminalInterface:
 
     def prompt_coordinates_only(self, state: str) -> Optional[Dict[str, Any]]:
         """
-        Simplified input: only coordinates and optional sq_ft.
+        Simplified input: only coordinates and optional sq_ft, address, and AADT.
 
-        This method replaces the 23-feature manual input with just 3-4 simple inputs.
+        This method replaces the 23-feature manual input with just 3-6 simple inputs.
         The coordinate calculator will automatically generate all features.
 
         Args:
             state: State code ('FL' or 'PA')
 
         Returns:
-            dict with 'latitude', 'longitude', and 'sq_ft' (optional)
+            dict with 'latitude', 'longitude', 'sq_ft' (optional), 'address' (optional), 'aadt' (optional)
             None if user cancels
         """
         print("\n--- Site Location ---")
@@ -584,6 +584,16 @@ class TerminalInterface:
                 break
             except ValueError as e:
                 print(f"  ❌ {e}")
+
+        # Get address (optional)
+        print("\n--- Site Address (Optional) ---")
+        print("Address is for identification/labeling only - not used in predictions")
+        address_input = input("> Address (press Enter to skip): ").strip()
+
+        if address_input.lower() == 'cancel':
+            return None
+
+        address = address_input if address_input else None
 
         # Get square footage (optional)
         print("\n--- Dispensary Size ---")
@@ -614,10 +624,39 @@ class TerminalInterface:
             except ValueError:
                 print(f"  ❌ Invalid input. Enter a number (e.g., '4500') or press Enter for default.")
 
+        # Get AADT (optional)
+        print("\n--- Traffic Data (Optional) ---")
+        print("AADT = Average Annual Daily Traffic of roads adjacent to site")
+        print("This is a supplementary metric for reports only - not used in predictions")
+        aadt_prompt = "> AADT (press Enter to skip): "
+
+        aadt = None
+        while True:
+            aadt_input = input(aadt_prompt).strip()
+
+            if aadt_input.lower() == 'cancel':
+                return None
+
+            # Empty input = skip
+            if not aadt_input:
+                break
+
+            # Try to parse as int
+            try:
+                aadt = int(aadt_input)
+                if aadt <= 0:
+                    print(f"  ❌ AADT must be positive. Try again or press Enter to skip.")
+                    continue
+                break
+            except ValueError:
+                print(f"  ❌ Invalid input. Enter a number (e.g., '25000') or press Enter to skip.")
+
         return {
             'latitude': lat,
             'longitude': lon,
-            'sq_ft': sq_ft
+            'sq_ft': sq_ft,
+            'address': address,
+            'aadt': aadt
         }
 
     def prompt_base_features(self, state: str) -> Optional[Dict[str, Any]]:
