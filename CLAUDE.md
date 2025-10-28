@@ -133,6 +133,14 @@
 - Batch mode flags sites with warnings in output CSV
 - Transparent about prediction reliability
 
+### **Confidence Interval Improvements (v2.1)**
+- Prediction-proportional RMSE scaling (smaller predictions = narrower intervals)
+- ±75% cap for business usability (prevents unusably wide intervals)
+- Transparent cap notifications in all outputs (HTML/CSV/TXT/CLI)
+- Reduced interval width from 222% → 150% of prediction
+- Lower bounds now meaningful (12k vs 0 for 50k prediction)
+- See: `docs/SESSION_SUMMARY_2025_10_28_CI_IMPROVEMENTS.md`
+
 ---
 
 ## Project Structure

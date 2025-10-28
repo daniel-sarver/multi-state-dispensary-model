@@ -574,7 +574,16 @@ class ReportGenerator:
                     <div class="visits">{result.get('predicted_visits', 0):,.0f}</div>
                     <div class="confidence-box">
                         <div class="label">95% Confidence Interval</div>
-                        <div>{result.get('ci_lower', 0):,.0f} - {result.get('ci_upper', 0):,.0f} visits</div>
+                        <div>{result.get('ci_lower', 0):,.0f} - {result.get('ci_upper', 0):,.0f} visits</div>'''
+
+        # Add cap notification if applied
+        if result.get('cap_applied', False):
+            html += f'''
+                        <div style="margin-top: 8px; font-size: 0.85em; color: #666;">
+                            ⚠️ Capped at ±{result.get('cap_percentage', 75):.0f}% for usability
+                        </div>'''
+
+        html += f'''
                         <div style="margin-top: 10px;">
                             <span class="confidence-indicator {conf_class}">{conf_level} CONFIDENCE</span>
                         </div>
@@ -752,6 +761,7 @@ class ReportGenerator:
                 'ci_lower': result.get('ci_lower', 0),
                 'ci_upper': result.get('ci_upper', 0),
                 'confidence_level': result.get('confidence_level', ''),
+                'ci_capped': 'YES' if result.get('cap_applied', False) else 'NO',
                 'sq_ft': result.get('sq_ft', 0),
                 'pop_1mi': result.get('pop_1mi', 0),
                 'pop_3mi': result.get('pop_3mi', 0),
@@ -804,7 +814,8 @@ class ReportGenerator:
                 f"Site {result['rank']}: {result.get('state', 'N/A')}",
                 f"  Coordinates: {result.get('latitude', 0):.6f}, {result.get('longitude', 0):.6f}",
                 f"  Predicted Annual Visits: {result.get('predicted_visits', 0):,.0f}",
-                f"  95% Confidence Interval: {result.get('ci_lower', 0):,.0f} - {result.get('ci_upper', 0):,.0f}",
+                f"  95% Confidence Interval: {result.get('ci_lower', 0):,.0f} - {result.get('ci_upper', 0):,.0f}" +
+                    (" (capped at ±75%)" if result.get('cap_applied', False) else ""),
                 f"  Confidence Level: {result.get('confidence_level', 'N/A')}",
                 f"  Population (5mi): {result.get('pop_5mi', 0):,.0f}",
                 f"  Competitors (5mi): {result.get('competitors_5mi', 0)}"

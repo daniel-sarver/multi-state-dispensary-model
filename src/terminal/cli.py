@@ -277,7 +277,8 @@ class TerminalInterface:
                 # Show quick summary for this site
                 print(f"\n✅ Site {site_count} Analysis Complete")
                 print(f"   Predicted Annual Visits: {result['prediction']:,.0f}")
-                print(f"   95% CI: {result['ci_lower']:,.0f} - {result['ci_upper']:,.0f}")
+                ci_label = "95% CI" if not result.get('cap_applied', False) else "95% CI (capped at ±75%)"
+                print(f"   {ci_label}: {result['ci_lower']:,.0f} - {result['ci_upper']:,.0f}")
 
             except Exception as e:
                 print(f"\n❌ Prediction Error: {e}")
@@ -385,7 +386,7 @@ class TerminalInterface:
                     method='normal'
                 )
 
-                # Store result with warning flags
+                # Store result with warning flags and cap metadata
                 result_row = {
                     'site_id': idx + 1,
                     'state': state,
@@ -397,6 +398,9 @@ class TerminalInterface:
                     'ci_upper': result['ci_upper'],
                     'ci_range': result['ci_upper'] - result['ci_lower'],
                     'confidence_level': 'HIGH' if result['ci_upper'] - result['ci_lower'] < 50000 else 'MODERATE' if result['ci_upper'] - result['ci_lower'] < 100000 else 'LOW',
+                    'ci_capped': 'YES' if result.get('cap_applied', False) else 'NO',
+                    'ci_lower_uncapped': result.get('ci_lower_uncapped', result['ci_lower']),
+                    'ci_upper_uncapped': result.get('ci_upper_uncapped', result['ci_upper']),
                     'extreme_values_warning': 'YES' if has_extreme_values else 'NO',
                     'warning_count': len(warnings)
                 }
@@ -878,8 +882,12 @@ class TerminalInterface:
         else:
             conf_level = "LOW"
 
-        # Merge all data
-        result_dict = {
+        # Start with base features, then add prediction metadata
+        # This preserves all prediction metadata (cap_applied, uncapped bounds, etc.)
+        result_dict = {**base_features}
+
+        # Add core result fields
+        result_dict.update({
             'state': state,
             'latitude': coords['latitude'],
             'longitude': coords['longitude'],
@@ -887,8 +895,15 @@ class TerminalInterface:
             'ci_lower': result['ci_lower'],
             'ci_upper': result['ci_upper'],
             'confidence_level': conf_level,
-            **base_features  # Include all base features
-        }
+        })
+
+        # Add all prediction metadata (cap_applied, cap_percentage, uncapped bounds, etc.)
+        # Filter out keys that we've already handled or would conflict
+        for key, value in result.items():
+            if key not in ['prediction', 'confidence_level']:
+                # Don't duplicate 'prediction' (renamed to 'predicted_visits')
+                # Don't overwrite 'confidence_level' string with the numeric value (0.95)
+                result_dict[key] = value
 
         return result_dict
 

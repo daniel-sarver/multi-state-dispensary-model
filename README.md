@@ -126,7 +126,8 @@ multi-state-dispensary-model/
 - **User-friendly terminal CLI** with clear prompts
 - **Robust error handling** with retry options
 - **Progress indicators** for long-running operations
-- **Confidence intervals** (95% CI with normal approximation)
+- **Business-friendly confidence intervals** (v2.1) - Prediction-proportional with ±75% cap
+- **Transparent cap notifications** - Shows when intervals capped for usability
 - **Feature drivers** showing top contributing factors
 - **On-the-fly census data fetching** - Handles all PA/FL locations automatically
 - **Extreme value warnings** - User approval for sites outside training range

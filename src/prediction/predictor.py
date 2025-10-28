@@ -183,13 +183,16 @@ class MultiStatePredictor:
 
         Notes
         -----
-        Normal approximation: CI = prediction ± z * RMSE
-        Bootstrap: Resample residuals, regenerate predictions, take percentiles
+        Prediction-Proportional Intervals (v2.1):
+        - Scales RMSE proportionally to prediction magnitude
+        - CI = prediction ± z * (RMSE * prediction / mean_training_visits)
+        - Smaller predictions get narrower intervals
+        - Maintains statistical coverage for typical predictions
 
         State-specific RMSE is used when available:
-        - Florida: Lower RMSE (33,162) for tighter intervals
-        - Pennsylvania: Higher RMSE (56,581) reflecting higher uncertainty
-        - Overall: Test RMSE (39,024) when state unknown
+        - Florida: Lower RMSE (18,270) for tighter intervals
+        - Pennsylvania: Higher RMSE (30,854) reflecting higher uncertainty
+        - Overall: Test RMSE (21,407) when state unknown
         """
         # Get point prediction
         prediction = self.predict(features_dict)
@@ -214,28 +217,66 @@ class MultiStatePredictor:
 
         if is_fl == 1:
             rmse = training_report['state_performance']['florida']['rmse']
+            mean_visits = training_report['state_performance']['florida']['mean_actual_visits']
             state_label = 'FL'
         elif is_pa == 1:
             rmse = training_report['state_performance']['pennsylvania']['rmse']
+            mean_visits = training_report['state_performance']['pennsylvania']['mean_actual_visits']
             state_label = 'PA'
         else:
             # Use overall test RMSE if state unknown (both indicators 0)
             rmse = training_report['test_set']['rmse']
+            mean_visits = training_report['test_set']['mean_actual_visits']
             state_label = 'overall'
 
         if method == 'normal':
-            # Fast normal approximation
+            # Fast normal approximation with prediction-proportional scaling
             from scipy import stats
             z_score = stats.norm.ppf((1 + confidence) / 2)
-            ci_half_width = z_score * rmse
+
+            # Scale RMSE proportionally to prediction magnitude
+            # This gives smaller intervals for smaller predictions
+            scale_factor = prediction / mean_visits
+            adjusted_rmse = rmse * scale_factor
+            ci_half_width = z_score * adjusted_rmse
+
+            # Calculate initial bounds
+            ci_lower_uncapped = max(0, prediction - ci_half_width)
+            ci_upper_uncapped = prediction + ci_half_width
+
+            # Apply ±75% cap for business usability
+            # This prevents intervals from being too wide to be actionable
+            max_half_width_pct = 0.75  # ±75% of prediction
+            max_half_width = prediction * max_half_width_pct
+
+            # Check if cap is needed
+            cap_applied = ci_half_width > max_half_width
+
+            if cap_applied:
+                # Apply cap
+                ci_lower = max(0, prediction - max_half_width)
+                ci_upper = prediction + max_half_width
+                confidence_level_note = 'CAPPED'
+            else:
+                # Use uncapped intervals
+                ci_lower = ci_lower_uncapped
+                ci_upper = ci_upper_uncapped
+                confidence_level_note = 'STATISTICAL'
 
             result = {
                 'prediction': prediction,
-                'ci_lower': max(0, prediction - ci_half_width),
-                'ci_upper': prediction + ci_half_width,
+                'ci_lower': ci_lower,
+                'ci_upper': ci_upper,
+                'ci_lower_uncapped': ci_lower_uncapped,
+                'ci_upper_uncapped': ci_upper_uncapped,
                 'confidence_level': confidence,
-                'method': 'normal_approximation',
+                'confidence_level_note': confidence_level_note,
+                'cap_applied': cap_applied,
+                'cap_percentage': max_half_width_pct * 100,
+                'method': 'prediction_proportional_capped',
                 'rmse_used': rmse,
+                'adjusted_rmse': adjusted_rmse,
+                'scale_factor': scale_factor,
                 'state': state_label
             }
 
