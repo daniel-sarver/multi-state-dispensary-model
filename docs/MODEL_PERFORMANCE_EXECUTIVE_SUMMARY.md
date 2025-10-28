@@ -2,48 +2,50 @@
 
 **Audience**: Business stakeholders and decision-makers
 **Purpose**: Explain model capabilities, limitations, and appropriate use cases
-**Date**: October 23, 2025
+**Date**: October 28, 2025 (Updated)
 
 ---
 
 ## What This Model Does
 
-The Multi-State Dispensary Model predicts monthly visit volume for potential dispensary locations in Florida and Pennsylvania based on:
+The Multi-State Dispensary Model predicts **annual visit volume** for potential dispensary locations in Florida and Pennsylvania based on:
 
 - **Location characteristics**: Square footage, address/coordinates
 - **Market demographics**: Population, income, education levels (Census data)
 - **Competition analysis**: Number and proximity of nearby dispensaries
 - **State-specific factors**: Florida vs Pennsylvania market differences
 
-**Input**: 23 site characteristics (square footage, population radii, competitor counts, demographics)
-**Output**: Predicted monthly visits with 95% confidence interval
+**Input**: 3-4 simple inputs (state, coordinates, optional square footage, optional address/AADT)
+**Output**: Predicted annual visits with 95% confidence interval (automatically capped at ±75% for usability)
 
 ---
 
 ## How the Model Works
 
 ### Training Data
-- **741 dispensaries** across Florida and Pennsylvania with real visit data
-- **937 total sites** including competitive landscape
+- **741 dispensaries** across Florida (590) and Pennsylvania (151) with real visit data
+- **Corrected annual visits** calibrated against Insa actual performance (45% Placer correction)
+- **Temporal adjustments** for 15 FL sites less than 12 months operational
 - **Verified data sources**: Placer.ai (visits), Census Bureau (demographics), state regulators (competition)
 
 ### Model Type
-- **Ridge Regression** with state interaction terms
-- Analyzes 44 features total (23 user-provided + 21 auto-generated)
-- Trained on 2+ years of market data
+- **Ridge Regression** (Alpha=1000) with state interaction terms
+- Analyzes 44 features total (3-4 user inputs → 44 auto-generated features)
+- Trained on corrected data with proper Pipeline (prevents data leakage)
+- **Model v2.1** with prediction-proportional confidence intervals (±75% cap)
 
 ### Key Predictive Factors (in order of importance)
-1. **Square footage** (+2,945 visits per 1,000 sq ft) - strongest predictor
-2. **Competition** (negative impact - more competitors = fewer visits)
-3. **Population within 5 miles** (positive but moderate impact)
-4. **State location** (PA baseline higher than FL)
-5. **Demographics** (income, education, population density)
+1. **Square footage** (+1,612 visits per sq ft) - strongest predictor
+2. **Competition** (negative impact - especially within 1mi and 5mi)
+3. **State location** (PA baseline ~1,034 visits higher than FL)
+4. **Market saturation** (dispensaries per capita)
+5. **Population density** (surprisingly negative correlation)
 
 ---
 
 ## Predictive Power: The Honest Assessment
 
-### Overall Performance: **R² = 0.19 (19%)**
+### Overall Performance: **R² = 0.19 (19%)** on Test Set
 
 **What this means in plain English:**
 
@@ -65,67 +67,72 @@ The model explains **about 19% of why some dispensaries succeed** while others d
 
 ## Performance by State: Critical Differences
 
-### Florida: Weak (R² = 0.05)
+### Florida: Very Weak (R² = 0.048)
 
-**Explains only 5% of success variance**
+**Explains only 4.8% of success variance**
 
 | Metric | Value | Interpretation |
 |--------|-------|----------------|
-| R² Score | 0.05 | Very weak predictive power |
-| Prediction Uncertainty | ±33,000 visits | Lower uncertainty, low accuracy |
+| R² Score | 0.048 | Very weak predictive power |
+| Prediction Uncertainty | ±18,270 visits RMSE | Moderate error on smaller volumes |
+| Training Data | 590 dispensaries | Large dataset, still weak |
 | Usability | **Rough ballpark only** | Directional guidance at best |
 
 **Why Florida is hard to predict:**
-- Highly competitive mature market
+- Highly competitive mature market (590 dispensaries)
 - Tourist population not captured in Census data
 - Seasonal variation (snowbirds)
 - Established brands dominate
+- High market saturation reduces demographic signal
 
-**Use case**: Rough estimates for comparative ranking only
+**Use case**: Comparative ranking only; expect ±50% variance from predictions
 
 ---
 
-### Pennsylvania: Very Weak (R² = -0.03)
+### Pennsylvania: Negative (R² = -0.028)
 
-**Worse than guessing the average!**
+**Worse than guessing the market average!**
 
 | Metric | Value | Interpretation |
 |--------|-------|----------------|
-| R² Score | -0.03 | Essentially doesn't work |
-| Prediction Uncertainty | ±57,000 visits | Very high uncertainty |
-| Usability | **Not recommended** | Use PA market averages instead |
+| R² Score | -0.028 | Negative = model doesn't work |
+| Prediction Uncertainty | ±30,854 visits RMSE | Very high error |
+| Training Data | 151 dispensaries | Smaller sample, different dynamics |
+| Usability | **Not recommended** | Use PA market median (52,118 annual visits) |
 
-**Why Pennsylvania doesn't work:**
-- Smaller training dataset (fewer PA dispensaries)
+**Why Pennsylvania predictions fail:**
+- Smaller training dataset (151 vs 590 FL sites)
 - Different market dynamics than Florida
-- Medical-only market structure (at training time)
-- Regulatory differences affect operations
+- Medical market with different patient behaviors
+- Model coefficients dominated by larger FL dataset
+- Leave-one-state-out validation shows no generalization
 
-**Use case**: Model predictions should be heavily discounted; rely on local market knowledge
+**Use case**: Ignore model predictions; use PA market median (52,118 annual visits) as baseline instead
 
 ---
 
 ## What the Confidence Intervals Really Mean
 
-### Example Prediction (Florida site):
+### Example Prediction (Pennsylvania site):
 
 ```
-Expected Monthly Visits:   79,893
-95% Confidence Interval:   14,897 - 144,889
-Confidence Level:          LOW
+Expected Annual Visits:    49,750
+95% Confidence Interval:   12,437 - 87,062 (capped at ±75%)
+Confidence Level:          MODERATE
 ```
 
 **Translation**:
 
-> "Our best guess is 80,000 visits/month, but the true number is almost certainly somewhere between 15,000 and 145,000."
+> "Our best guess is 49,750 annual visits, but the true number could realistically be anywhere between 12,000 and 87,000."
 
-That's a **130,000-visit range** - the actual performance could be **10x our prediction** (either higher or lower).
+That's a **74,625-visit range** (150% of the prediction) - actual performance could be 25% or 175% of our estimate.
 
-**Why such wide intervals?**
+**Why such wide intervals (even with ±75% cap)?**
 - Model has limited explanatory power (R² = 0.19)
 - Many critical success factors not captured in data
 - Significant market variability across dispensaries
 - Honest uncertainty quantification (not artificial precision)
+- **Intervals are capped at ±75%** for business usability (uncapped would be even wider)
 
 ---
 
@@ -248,16 +255,22 @@ Without access to operational data, **demographic and competitive factors alone 
 
 | Metric | Value | Interpretation |
 |--------|-------|----------------|
-| **Overall R²** | 0.194 | Explains 19% of variance |
-| **Cross-Validation R²** | 0.187 ± 0.065 | Consistent across data splits |
-| **Test RMSE** | 39,024 visits | Average prediction error |
-| **Florida R²** | 0.049 | Very weak (5% variance) |
-| **Florida RMSE** | 33,162 visits | Lower error, still weak |
-| **Pennsylvania R²** | -0.027 | Negative (worse than mean) |
-| **Pennsylvania RMSE** | 56,581 visits | High error, unreliable |
-| **Training Sites** | 741 dispensaries | Large dataset |
-| **Features** | 44 total | Comprehensive coverage |
-| **Improvement** | 2.62x over baseline | Significant progress |
+| **Model Version** | v2.1 | Latest with CI improvements |
+| **Training Date** | 2025-10-24 | Current production model |
+| **Target Variable** | corrected_visits | Annual visits (Placer-corrected) |
+| **Overall Test R²** | 0.1898 | Explains 19% of variance |
+| **Cross-Validation R²** | 0.1812 ± 0.0661 | Consistent across folds |
+| **Test RMSE** | 21,407 annual visits | Average prediction error |
+| **Florida R²** | 0.0479 | Very weak (4.8% variance) |
+| **Florida RMSE** | 18,270 visits | Moderate error |
+| **Pennsylvania R²** | -0.0278 | Negative (unreliable) |
+| **Pennsylvania RMSE** | 30,854 visits | High error |
+| **Training Sites** | 741 dispensaries | FL: 590, PA: 151 |
+| **Training/Test Split** | 592 / 149 | 80/20 split |
+| **Features** | 44 total | 23 base + 21 derived |
+| **Ridge Alpha** | 1000 | Regularization parameter |
+| **Improvement** | 2.53x over v1 | Statistical power maintained |
+| **Data Correction** | 45% Placer adj. | Calibrated to Insa actuals |
 
 ---
 
@@ -328,8 +341,8 @@ Use this model as **one input in a multi-factor decision process**, not as the p
 
 **Usage**: Interactive CLI available at `src/terminal/cli.py`
 
-**Model Version**: v1.0 (October 23, 2025)
-**Last Updated**: October 23, 2025
+**Model Version**: v2.1 (October 28, 2025)
+**Last Updated**: October 28, 2025
 
 ---
 
