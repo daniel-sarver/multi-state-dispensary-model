@@ -128,6 +128,9 @@ multi-state-dispensary-model/
 - **Progress indicators** for long-running operations
 - **Confidence intervals** (95% CI with normal approximation)
 - **Feature drivers** showing top contributing factors
+- **On-the-fly census data fetching** - Handles all PA/FL locations automatically
+- **Extreme value warnings** - User approval for sites outside training range
+- **Safe data handling** - Graceful degradation when Census API data incomplete
 
 ## Development Principles
 

@@ -117,6 +117,24 @@
 
 ---
 
+## Recent Enhancements (October 2025)
+
+### **On-the-Fly Census Tract Fetching**
+- System automatically fetches missing census tracts from Census API
+- Handles all PA/FL locations (not just pre-loaded tracts)
+- Safe handling of None values when Census data incomplete
+- Cached for performance
+- See: `docs/SESSION_SUMMARY_2025_10_28_CENSUS_TRACT_FIX.md`
+
+### **Extreme Value Warning System**
+- Validates features against training data ranges
+- Prompts user for approval when values extreme
+- Distinguishes between extreme (requires approval) and out-of-range (informational)
+- Batch mode flags sites with warnings in output CSV
+- Transparent about prediction reliability
+
+---
+
 ## Project Structure
 
 ```

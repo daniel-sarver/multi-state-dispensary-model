@@ -141,14 +141,35 @@ class FeatureValidator:
         Raises:
             ValueError: If validation fails or features are missing/invalid
         """
+        features, _ = self.prepare_features_with_warnings(base_features, state)
+        return features
+
+    def prepare_features_with_warnings(
+        self, base_features: Dict[str, Any], state: str
+    ) -> Tuple[Dict[str, float], List[Dict[str, str]]]:
+        """
+        Validate base features and generate complete feature set with warnings.
+
+        Args:
+            base_features: User-provided features (23 required base features)
+            state: 'FL' or 'PA'
+
+        Returns:
+            Tuple of (complete_features, warnings_list)
+            - complete_features: Complete dictionary with all 44 features
+            - warnings_list: List of warning dicts with 'type', 'feature', 'value', 'range', 'message'
+
+        Raises:
+            ValueError: If validation fails (missing features, negative values, etc.)
+        """
         # Step 1: Validate state
         state = self._validate_state(state)
 
         # Step 2: Validate base features present
         self._validate_base_features_present(base_features)
 
-        # Step 3: Validate types and ranges
-        validated_base = self._validate_base_feature_values(base_features)
+        # Step 3: Validate types and ranges (now returns warnings)
+        validated_base, warnings = self._validate_base_feature_values(base_features)
 
         # Step 4: Generate all derived features
         complete_features = self._generate_all_derived_features(validated_base, state)
@@ -156,7 +177,7 @@ class FeatureValidator:
         # Step 5: Final completeness check
         self._validate_complete_features(complete_features)
 
-        return complete_features
+        return complete_features, warnings
 
     def _validate_state(self, state: str) -> str:
         """Validate and normalize state input."""
@@ -183,15 +204,17 @@ class FeatureValidator:
                 "\n".join(f"  - {feat}" for feat in sorted(missing))
             )
 
-    def _validate_base_feature_values(self, features: Dict[str, Any]) -> Dict[str, float]:
+    def _validate_base_feature_values(self, features: Dict[str, Any]) -> Tuple[Dict[str, float], List[Dict[str, str]]]:
         """
         Validate types, ranges, and business logic for base features.
 
         Returns:
-            Validated features as Dict[str, float]
+            Tuple of (validated_features, warnings_list)
+            - validated_features: Dict[str, float]
+            - warnings_list: List of warning dicts with structured info
         """
         validated = {}
-        warnings = []
+        warnings_list = []
         errors = []
 
         for feat_name, value in features.items():
@@ -225,35 +248,37 @@ class FeatureValidator:
                 min_val = ranges['min']
                 max_val = ranges['max']
 
-                # Hard errors for extreme out-of-range values
+                # Warnings for extreme out-of-range values (changed from errors)
                 if value_float < min_val * 0.5 or value_float > max_val * 2.0:
-                    errors.append(
-                        f"{feat_name}: Value {value_float:,.2f} is extreme. "
-                        f"Training range: [{min_val:,.2f}, {max_val:,.2f}]"
-                    )
+                    warnings_list.append({
+                        'type': 'extreme',
+                        'feature': feat_name,
+                        'value': value_float,
+                        'min': min_val,
+                        'max': max_val,
+                        'message': f"{feat_name}: Value {value_float:,.2f} is extreme. Training range: [{min_val:,.2f}, {max_val:,.2f}]"
+                    })
                 # Warnings for outside training range but not extreme
                 elif value_float < min_val or value_float > max_val:
-                    warnings.append(
-                        f"{feat_name}: Value {value_float:,.2f} outside training range "
-                        f"[{min_val:,.2f}, {max_val:,.2f}]"
-                    )
+                    warnings_list.append({
+                        'type': 'out_of_range',
+                        'feature': feat_name,
+                        'value': value_float,
+                        'min': min_val,
+                        'max': max_val,
+                        'message': f"{feat_name}: Value {value_float:,.2f} outside training range [{min_val:,.2f}, {max_val:,.2f}]"
+                    })
 
             validated[feat_name] = value_float
 
-        # Print warnings
-        if warnings:
-            print("\n⚠️  Validation Warnings:")
-            for w in warnings:
-                print(f"  {w}")
-
-        # Raise if errors
+        # Raise if errors (hard errors only - not warnings)
         if errors:
             raise ValueError(
                 f"Feature validation failed with {len(errors)} error(s):\n" +
                 "\n".join(f"  - {e}" for e in errors)
             )
 
-        return validated
+        return validated, warnings_list
 
     def _generate_all_derived_features(
         self, base_features: Dict[str, float], state: str

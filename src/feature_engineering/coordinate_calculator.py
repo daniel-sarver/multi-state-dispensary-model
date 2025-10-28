@@ -11,6 +11,7 @@ Key Features:
 - Distance-weighted competition score
 - Census tract matching and demographic extraction
 - Master method generating all 23 features from coordinates
+- On-the-fly census data fetching for missing tracts
 
 Author: Multi-State Dispensary Model - Phase 2 CLI Automation
 Date: October 2025
@@ -27,6 +28,7 @@ warnings.filterwarnings('ignore')
 try:
     from .data_loader import MultiStateDataLoader
     from .census_tract_identifier import CensusTractIdentifier
+    from .acs_data_collector import ACSDataCollector
     from .exceptions import DataNotFoundError, InvalidStateError, InvalidCoordinatesError
 except ImportError:
     # Allow running as standalone script
@@ -35,6 +37,7 @@ except ImportError:
     sys.path.insert(0, str(Path(__file__).parent))
     from data_loader import MultiStateDataLoader
     from census_tract_identifier import CensusTractIdentifier
+    from acs_data_collector import ACSDataCollector
     from exceptions import DataNotFoundError, InvalidStateError, InvalidCoordinatesError
 
 
@@ -87,6 +90,16 @@ class CoordinateFeatureCalculator:
 
         # Initialize Census API wrapper
         self.census_identifier = CensusTractIdentifier()
+
+        # Initialize ACS data collector for missing tracts
+        try:
+            self.acs_collector = ACSDataCollector()
+        except ValueError:
+            # Census API key not available - will fail gracefully when needed
+            self.acs_collector = None
+
+        # Cache for dynamically fetched tracts
+        self.fetched_tracts_cache = {}
 
         print("✅ Feature calculator ready\n")
 
@@ -331,6 +344,164 @@ class CoordinateFeatureCalculator:
 
         return weighted_score
 
+    def _safe_float(self, value: any, default: float = 0.0) -> float:
+        """
+        Safely convert value to float, handling None and invalid values.
+
+        Args:
+            value: Value to convert
+            default: Default value if conversion fails
+
+        Returns:
+            float: Converted value or default
+        """
+        if value is None:
+            return default
+        try:
+            return float(value)
+        except (ValueError, TypeError):
+            return default
+
+    def _safe_int(self, value: any, default: int = 0) -> int:
+        """
+        Safely convert value to int, handling None and invalid values.
+
+        Args:
+            value: Value to convert
+            default: Default value if conversion fails
+
+        Returns:
+            int: Converted value or default
+        """
+        if value is None:
+            return default
+        try:
+            return int(value)
+        except (ValueError, TypeError):
+            return default
+
+    def _fetch_missing_tract(self, geoid: str, state: str) -> Optional[pd.Series]:
+        """
+        Fetch demographics for a missing census tract from Census API.
+
+        Args:
+            geoid (str): 11-digit census tract GEOID (state+county+tract)
+            state (str): State code ('FL' or 'PA')
+
+        Returns:
+            pd.Series: Tract demographics or None if fetch failed
+        """
+        # Parse GEOID into components
+        state_fips = geoid[:2]
+        county_fips = geoid[2:5]
+        tract_fips = geoid[5:11]
+
+        # Fetch demographics from ACS API
+        acs_result = self.acs_collector.get_tract_demographics(
+            state_fips=state_fips,
+            county_fips=county_fips,
+            tract_fips=tract_fips
+        )
+
+        if not acs_result.get('success', False):
+            return None
+
+        # Get tract centroid from Gazetteer
+        centroid = self._get_tract_centroid(geoid, state)
+        if centroid is None:
+            print(f"      ⚠️  Warning: Could not find centroid for tract {geoid}")
+            return None
+
+        # Create Series matching census_df schema
+        # Use safe conversions to handle None values from ACS API
+        tract = pd.Series({
+            'census_geoid': geoid,
+            'census_state_fips': int(state_fips),
+            'census_county_fips': int(county_fips),
+            'census_tract_fips': int(tract_fips),
+            'total_population': self._safe_int(acs_result.get('total_population'), 0),
+            'median_age': self._safe_float(acs_result.get('median_age'), 0.0),
+            'median_household_income': self._safe_float(acs_result.get('median_household_income'), 0.0),
+            'per_capita_income': self._safe_float(acs_result.get('per_capita_income'), 0.0),
+            'total_pop_25_plus': self._safe_int(acs_result.get('total_pop_25_plus'), 0),
+            'bachelors_degree': self._safe_int(acs_result.get('bachelors_degree'), 0),
+            'masters_degree': self._safe_int(acs_result.get('masters_degree'), 0),
+            'professional_degree': self._safe_int(acs_result.get('professional_degree'), 0),
+            'doctorate_degree': self._safe_int(acs_result.get('doctorate_degree'), 0),
+            'latitude': float(centroid['latitude']),
+            'longitude': float(centroid['longitude']),
+            'tract_area_sqm': self._safe_float(centroid.get('area_sqm'), 0.0),
+            'population_density': 0.0,  # Will be calculated
+            'census_data_complete': acs_result.get('data_complete', False),
+            'census_api_error': False
+        })
+
+        # Calculate population density
+        if tract['tract_area_sqm'] > 0 and tract['total_population'] > 0:
+            tract['population_density'] = tract['total_population'] / (tract['tract_area_sqm'] / 2589988.11)
+
+        # Cache for future use (e.g., population calculations)
+        self.fetched_tracts_cache[geoid] = tract
+
+        # Add to state census data for subsequent operations
+        if state.upper() == 'FL':
+            self.data_loader.fl_census = pd.concat([self.data_loader.fl_census, tract.to_frame().T], ignore_index=True)
+        elif state.upper() == 'PA':
+            self.data_loader.pa_census = pd.concat([self.data_loader.pa_census, tract.to_frame().T], ignore_index=True)
+
+        return tract
+
+    def _get_tract_centroid(self, geoid: str, state: str) -> Optional[Dict]:
+        """
+        Get tract centroid coordinates from Census Gazetteer file.
+
+        Args:
+            geoid (str): 11-digit census tract GEOID
+            state (str): State code ('FL' or 'PA')
+
+        Returns:
+            dict: {'latitude': float, 'longitude': float, 'area_sqm': float} or None
+        """
+        # Map state to FIPS
+        state_fips_map = {'FL': '12', 'PA': '42'}
+        state_fips = state_fips_map.get(state.upper())
+
+        if state_fips is None:
+            return None
+
+        # Load Gazetteer file
+        gazetteer_file = self.data_loader.project_root / "data" / "census" / "gazeteer" / f"2020_Gaz_tracts_{state_fips}.txt"
+
+        if not gazetteer_file.exists():
+            return None
+
+        try:
+            # Read Gazetteer file
+            gaz_df = pd.read_csv(gazetteer_file, sep='\t', dtype={'GEOID': str})
+
+            # Strip whitespace from column names (Gazetteer files have trailing spaces)
+            gaz_df.columns = gaz_df.columns.str.strip()
+
+            # Find tract
+            tract_row = gaz_df[gaz_df['GEOID'] == geoid]
+
+            if len(tract_row) == 0:
+                return None
+
+            tract = tract_row.iloc[0]
+
+            # Extract centroid and area
+            # ALAND is in square meters
+            return {
+                'latitude': float(tract['INTPTLAT']),
+                'longitude': float(tract['INTPTLONG']),
+                'area_sqm': float(tract['ALAND']) if 'ALAND' in tract else 0
+            }
+
+        except Exception as e:
+            print(f"      ⚠️  Error reading Gazetteer: {e}")
+            return None
+
     def match_census_tract(
         self,
         state: str,
@@ -394,35 +565,48 @@ class CoordinateFeatureCalculator:
         tract_data = census_df[census_df['census_geoid'] == geoid]
 
         if len(tract_data) == 0:
-            raise DataNotFoundError(
-                f"❌ Census tract {geoid} not found in {state} demographics database\n\n"
-                f"The Census API identified this tract, but we don't have demographic\n"
-                f"data for it in our database. This should not happen if coordinates\n"
-                f"are within {state}.\n\n"
-                f"Verify:\n"
-                f"  • Coordinates are within {state} boundaries\n"
-                f"  • Census data file has complete coverage\n\n"
-                f"Cannot proceed without census demographic data."
-            )
+            # Tract not in database - fetch on-the-fly
+            print(f"    ⚠️  Tract {geoid} not in database, fetching from Census API...")
 
-        tract = tract_data.iloc[0]
+            if self.acs_collector is None:
+                raise DataNotFoundError(
+                    f"❌ Census tract {geoid} not found in {state} demographics database\n\n"
+                    f"Census API key not configured. Cannot fetch missing tract data.\n"
+                    f"Set CENSUS_API_KEY environment variable to enable on-the-fly data fetching."
+                )
+
+            # Fetch tract demographics from ACS API
+            tract_fetched = self._fetch_missing_tract(geoid, state)
+
+            if tract_fetched is None:
+                raise DataNotFoundError(
+                    f"❌ Failed to fetch demographics for census tract {geoid}\n\n"
+                    f"The tract exists but we couldn't retrieve demographic data from the Census API.\n"
+                    f"This may be a temporary API issue. Please try again later."
+                )
+
+            tract = tract_fetched
+            print(f"    ✓ Demographics fetched from Census API")
+        else:
+            tract = tract_data.iloc[0]
 
         # Extract demographic features
         # Return raw census features as expected by feature_validator
+        # Use safe conversions to handle None values from dynamically fetched tracts
         demographics = {
             'census_geoid': geoid,
-            'median_age': float(tract['median_age']),
-            'median_household_income': float(tract['median_household_income']),
-            'per_capita_income': float(tract['per_capita_income']),
-            'population_density': float(tract['population_density']),
-            'tract_area_sqm': float(tract['tract_area_sqm']),
+            'median_age': self._safe_float(tract['median_age'], 0.0),
+            'median_household_income': self._safe_float(tract['median_household_income'], 0.0),
+            'per_capita_income': self._safe_float(tract['per_capita_income'], 0.0),
+            'population_density': self._safe_float(tract['population_density'], 0.0),
+            'tract_area_sqm': self._safe_float(tract['tract_area_sqm'], 0.0),
             # Raw census demographics (as expected by feature_validator)
-            'total_population': int(tract['total_population']),
-            'total_pop_25_plus': int(tract['total_pop_25_plus']),
-            'bachelors_degree': int(tract['bachelors_degree']),
-            'masters_degree': int(tract['masters_degree']),
-            'professional_degree': int(tract['professional_degree']),
-            'doctorate_degree': int(tract['doctorate_degree'])
+            'total_population': self._safe_int(tract['total_population'], 0),
+            'total_pop_25_plus': self._safe_int(tract['total_pop_25_plus'], 0),
+            'bachelors_degree': self._safe_int(tract['bachelors_degree'], 0),
+            'masters_degree': self._safe_int(tract['masters_degree'], 0),
+            'professional_degree': self._safe_int(tract['professional_degree'], 0),
+            'doctorate_degree': self._safe_int(tract['doctorate_degree'], 0)
         }
 
         print(f"    ✓ Demographics extracted")
@@ -479,7 +663,12 @@ class CoordinateFeatureCalculator:
         self.validate_coordinates(state, latitude, longitude)
         print(f"✓ Coordinates validated")
 
-        # Calculate population features
+        # Match census tract first (this may fetch missing tract and add it to database)
+        # This ensures the tract is available for population calculations
+        print(f"\n🗺️  Identifying census tract...")
+        demographics = self.match_census_tract(state, latitude, longitude)
+
+        # Calculate population features (now with the fetched tract available)
         print(f"\n📊 Calculating population features...")
         populations = self.calculate_population_multi_radius(state, latitude, longitude)
         for radius in self.RADII:
@@ -499,9 +688,8 @@ class CoordinateFeatureCalculator:
         competition_weighted = self.calculate_competition_weighted(state, latitude, longitude, radius=20)
         print(f"  • Weighted score (20mi): {competition_weighted:.4f}")
 
-        # Match census tract and get demographics
-        print(f"\n🗺️  Matching census tract and extracting demographics...")
-        demographics = self.match_census_tract(state, latitude, longitude)
+        # Print demographics summary
+        print(f"\n📍 Census tract demographics...")
         print(f"  • Census tract: {demographics['census_geoid']}")
         print(f"  • Median age: {demographics['median_age']:.1f} years")
         print(f"  • Median household income: ${demographics['median_household_income']:,.0f}")

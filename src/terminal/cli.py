@@ -201,9 +201,44 @@ class TerminalInterface:
             # Validate and generate derived features
             print("\n🔄 Validating inputs and generating derived features...")
             try:
-                complete_features = self.validator.prepare_features(
+                complete_features, warnings = self.validator.prepare_features_with_warnings(
                     base_features, state
                 )
+
+                # Check for extreme value warnings
+                extreme_warnings = [w for w in warnings if w['type'] == 'extreme']
+
+                if extreme_warnings:
+                    print(f"\n⚠️  Warning: {len(extreme_warnings)} feature(s) have extreme values:")
+                    for w in extreme_warnings:
+                        print(f"   • {w['message']}")
+
+                    print("\n   This site is outside the training data range.")
+                    print("   Predictions may be less reliable.")
+
+                    # Ask user for approval
+                    approve = input("\n> Proceed with analysis anyway? (y/n): ").strip().lower()
+
+                    if approve != 'y':
+                        print("  Skipping this site...")
+
+                        # Ask if they want to try another site
+                        if site_count < max_sites:
+                            retry = input("\n> Add another site? (y/n): ").strip().lower()
+                            if retry == 'y':
+                                site_count += 1
+                                continue
+                        break
+                    else:
+                        print("  ✓ Proceeding with analysis (user approved)")
+
+                # Show non-extreme warnings if any
+                other_warnings = [w for w in warnings if w['type'] != 'extreme']
+                if other_warnings:
+                    print(f"\n⚠️  Note: {len(other_warnings)} feature(s) outside typical range:")
+                    for w in other_warnings:
+                        print(f"   • {w['message']}")
+
                 print("✅ All inputs valid - 44 features generated")
             except ValueError as e:
                 print(f"\n❌ Validation Error: {e}")
@@ -335,9 +370,13 @@ class TerminalInterface:
                 state = str(row['state']).upper()
 
                 # Validate and generate
-                complete_features = self.validator.prepare_features(
+                complete_features, warnings = self.validator.prepare_features_with_warnings(
                     base_features, state
                 )
+
+                # Check for extreme warnings
+                extreme_warnings = [w for w in warnings if w['type'] == 'extreme']
+                has_extreme_values = len(extreme_warnings) > 0
 
                 # Predict
                 result = self.predictor.predict_with_confidence(
@@ -346,7 +385,7 @@ class TerminalInterface:
                     method='normal'
                 )
 
-                # Store result
+                # Store result with warning flags
                 result_row = {
                     'site_id': idx + 1,
                     'state': state,
@@ -357,11 +396,14 @@ class TerminalInterface:
                     'ci_lower': result['ci_lower'],
                     'ci_upper': result['ci_upper'],
                     'ci_range': result['ci_upper'] - result['ci_lower'],
-                    'confidence_level': 'HIGH' if result['ci_upper'] - result['ci_lower'] < 50000 else 'MODERATE' if result['ci_upper'] - result['ci_lower'] < 100000 else 'LOW'
+                    'confidence_level': 'HIGH' if result['ci_upper'] - result['ci_lower'] < 50000 else 'MODERATE' if result['ci_upper'] - result['ci_lower'] < 100000 else 'LOW',
+                    'extreme_values_warning': 'YES' if has_extreme_values else 'NO',
+                    'warning_count': len(warnings)
                 }
                 results.append(result_row)
 
-                print(f"  ✅ Site {idx + 1}/{len(df)} processed")
+                status_icon = "⚠️ " if has_extreme_values else "✅"
+                print(f"  {status_icon} Site {idx + 1}/{len(df)} processed{' (extreme values)' if has_extreme_values else ''}")
 
             except Exception as e:
                 print(f"  ❌ Site {idx + 1} failed: {e}")
@@ -381,10 +423,14 @@ class TerminalInterface:
 
         # Show summary
         successful = len([r for r in results if 'error' not in r])
+        with_warnings = len([r for r in results if r.get('extreme_values_warning') == 'YES'])
+
         print(f"\nSummary:")
         print(f"  Total Sites:     {len(results)}")
         print(f"  Successful:      {successful}")
         print(f"  Failed:          {len(results) - successful}")
+        if with_warnings > 0:
+            print(f"  ⚠️  With Extreme Values: {with_warnings}")
 
         if successful > 0:
             avg_pred = results_df[results_df['predicted_visits'].notna()]['predicted_visits'].mean()
