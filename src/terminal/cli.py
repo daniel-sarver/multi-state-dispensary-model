@@ -386,10 +386,14 @@ class TerminalInterface:
                     method='normal'
                 )
 
-                # Store result with warning flags and cap metadata
+                # Store result with warning flags, cap metadata, and optional context fields
                 result_row = {
                     'site_id': idx + 1,
                     'state': state,
+                    'address': row.get('address', ''),
+                    'latitude': row.get('latitude', ''),
+                    'longitude': row.get('longitude', ''),
+                    'aadt': row.get('aadt', ''),
                     'sq_ft': base_features['sq_ft'],
                     'pop_5mi': base_features['pop_5mi'],
                     'competitors_5mi': base_features['competitors_5mi'],
@@ -414,6 +418,10 @@ class TerminalInterface:
                 results.append({
                     'site_id': idx + 1,
                     'state': row.get('state', 'UNKNOWN'),
+                    'address': row.get('address', ''),
+                    'latitude': row.get('latitude', ''),
+                    'longitude': row.get('longitude', ''),
+                    'aadt': row.get('aadt', ''),
                     'error': str(e)
                 })
 
@@ -925,11 +933,13 @@ class TerminalInterface:
         # This preserves all prediction metadata (cap_applied, uncapped bounds, etc.)
         result_dict = {**base_features}
 
-        # Add core result fields
+        # Add core result fields (including optional address/AADT from coords)
         result_dict.update({
             'state': state,
             'latitude': coords['latitude'],
             'longitude': coords['longitude'],
+            'address': coords.get('address'),
+            'aadt': coords.get('aadt'),
             'predicted_visits': result['prediction'],
             'ci_lower': result['ci_lower'],
             'ci_upper': result['ci_upper'],
