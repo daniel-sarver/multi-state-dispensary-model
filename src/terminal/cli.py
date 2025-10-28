@@ -35,8 +35,12 @@ class TerminalInterface:
         """Initialize predictor, validator, and coordinate calculator."""
         print("\n🔄 Loading model and data sources...")
         try:
-            self.predictor = MultiStatePredictor()
+            # Use v2 unified model for header/info display
+            self.predictor = MultiStatePredictor(model_version='v2')
             self.validator = FeatureValidator()
+
+            # Cache for state-specific predictors (v3)
+            self._state_predictors = {}
 
             # Initialize coordinate calculator for auto-feature generation
             self.data_loader = MultiStateDataLoader()
@@ -46,6 +50,29 @@ class TerminalInterface:
         except Exception as e:
             print(f"❌ Error loading model: {e}")
             sys.exit(1)
+
+    def get_predictor_for_state(self, state: str) -> MultiStatePredictor:
+        """
+        Get the appropriate predictor for a given state.
+
+        Uses state-specific v3 models for within-state predictions.
+        Caches predictors to avoid reloading.
+
+        Parameters:
+        -----------
+        state : str
+            State code ('FL' or 'PA')
+
+        Returns:
+        --------
+        MultiStatePredictor
+            State-specific predictor (v3)
+        """
+        if state not in self._state_predictors:
+            # Load state-specific v3 model
+            self._state_predictors[state] = MultiStatePredictor(state=state, model_version='v3')
+
+        return self._state_predictors[state]
 
     def run(self):
         """Main entry point - run interactive session."""
@@ -252,17 +279,20 @@ class TerminalInterface:
                         continue
                 break
 
-            # Generate prediction
+            # Generate prediction using state-specific model (v3)
             print("🔄 Generating prediction with confidence intervals...")
             try:
-                result = self.predictor.predict_with_confidence(
+                # Get state-specific predictor for within-state comparison
+                predictor = self.get_predictor_for_state(state)
+
+                result = predictor.predict_with_confidence(
                     complete_features,
                     confidence=0.95,
                     method='normal'
                 )
 
                 # Get top drivers
-                top_drivers = self.predictor.get_top_drivers(
+                top_drivers = predictor.get_top_drivers(
                     complete_features, n=5
                 )
 
@@ -379,8 +409,9 @@ class TerminalInterface:
                 extreme_warnings = [w for w in warnings if w['type'] == 'extreme']
                 has_extreme_values = len(extreme_warnings) > 0
 
-                # Predict
-                result = self.predictor.predict_with_confidence(
+                # Predict using state-specific model (v3)
+                predictor = self.get_predictor_for_state(state)
+                result = predictor.predict_with_confidence(
                     complete_features,
                     confidence=0.95,
                     method='normal'
@@ -854,7 +885,15 @@ class TerminalInterface:
         print(f"  Prediction Range:          ±{ci_range / 2:,.0f} visits")
 
         # Top Feature Drivers
-        print("\n🔝 Top Feature Drivers:")
+        # Detect if we have importances (tree models, 0-1 scale) or contributions (Ridge, visit deltas)
+        max_contribution = top_drivers['contribution'].abs().max()
+        is_importance = max_contribution <= 1.0
+
+        if is_importance:
+            print("\n🔝 Top Feature Importances (Tree-Based Model):")
+        else:
+            print("\n🔝 Top Feature Drivers:")
+
         for idx, row in top_drivers.iterrows():
             feature = row['feature']
             impact = row['contribution']
@@ -862,15 +901,21 @@ class TerminalInterface:
             # Format feature name
             feature_display = feature.replace('_', ' ').title()
 
-            # Direction indicator
-            if impact > 0:
-                direction = "✅"
-                strength = "strong positive" if abs(impact) > 5000 else "moderate positive" if abs(impact) > 1000 else "weak positive"
+            if is_importance:
+                # Tree-based model: show as importance percentage
+                importance_pct = impact * 100
+                print(f"  🔹 {feature_display:30s} {importance_pct:6.1f}% importance")
             else:
-                direction = "⚠️ "
-                strength = "strong negative" if abs(impact) > 5000 else "moderate negative" if abs(impact) > 1000 else "weak negative"
+                # Ridge model: show as visit delta
+                # Direction indicator
+                if impact > 0:
+                    direction = "✅"
+                    strength = "strong positive" if abs(impact) > 5000 else "moderate positive" if abs(impact) > 1000 else "weak positive"
+                else:
+                    direction = "⚠️ "
+                    strength = "strong negative" if abs(impact) > 5000 else "moderate negative" if abs(impact) > 1000 else "weak negative"
 
-            print(f"  {direction} {feature_display:30s} {impact:+8,.0f} visits ({strength})")
+                print(f"  {direction} {feature_display:30s} {impact:+8,.0f} visits ({strength})")
 
         # Model Performance
         info = self.predictor.get_model_info()
@@ -902,8 +947,16 @@ class TerminalInterface:
             top_row = top_drivers.iloc[0]
             feature_name = top_row['feature'].replace('_', ' ').title()
             contribution = top_row['contribution']
-            print(f"\n  Key factor: {feature_name} is the")
-            print(f"  strongest driver ({contribution:+,.0f} visits impact).")
+
+            if is_importance:
+                # Tree-based model: show as importance
+                importance_pct = contribution * 100
+                print(f"\n  Key factor: {feature_name} is the")
+                print(f"  most important feature ({importance_pct:.1f}% importance).")
+            else:
+                # Ridge model: show as visit delta
+                print(f"\n  Key factor: {feature_name} is the")
+                print(f"  strongest driver ({contribution:+,.0f} visits impact).")
 
         print("\n" + "=" * 70)
 

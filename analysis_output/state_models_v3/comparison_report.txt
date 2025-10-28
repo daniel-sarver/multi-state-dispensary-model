@@ -1,0 +1,23 @@
+================================================================================
+STATE-SPECIFIC MODELS V3 - PERFORMANCE COMPARISON
+================================================================================
+
+BASELINE MODEL V2 (Within-State Performance):
+  Florida: R² = 0.0480
+  Pennsylvania: R² = -0.0280
+
+BEST STATE-SPECIFIC MODELS V3:
+
+Florida:
+  Feature Set: Full Model
+  Algorithm: Ridge
+  CV R² = 0.0685
+  Improvement: ΔR² = +0.0205
+
+Pennsylvania:
+  Feature Set: Full Model
+  Algorithm: Random Forest
+  CV R² = 0.0756
+  Improvement: ΔR² = +0.1036
+
+================================================================================
