@@ -167,6 +167,16 @@
 - CSV properly sorted by rank
 - See: `docs/SESSION_SUMMARY_2025_10_29_REPORT_V3_IMPROVEMENTS.md`
 
+### **Report Readability Optimizations** (October 29, 2025)
+- Rankings table now displays scores instead of confidence indicators
+- Removed colored backgrounds from all metric boxes for better readability
+- Replaced green gradient prediction box with neutral backgrounds and high-contrast text
+- Navy blue visit numbers with dark text on light backgrounds
+- Subtle teal borders maintain state branding without reducing legibility
+- Dramatically improved contrast meets WCAG accessibility standards
+- Professional, clean design suitable for client-facing reports
+- See: `docs/SESSION_SUMMARY_2025_10_29_REPORT_READABILITY.md`
+
 ---
 
 ## Project Structure
