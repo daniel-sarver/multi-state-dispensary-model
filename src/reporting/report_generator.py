@@ -436,30 +436,33 @@ class ReportGenerator:
         }}
 
         .prediction-box {{
-            background: linear-gradient(135deg, {colors['primary']}, {colors['accent']});
-            color: white;
+            background: #f8f9fa;
+            color: #333;
             padding: 20px;
             border-radius: 8px;
             margin: 20px 0;
             text-align: center;
+            border: 2px solid {colors['primary']};
         }}
 
         .prediction-box .visits {{
             font-size: 32px;
             font-weight: bold;
             margin: 10px 0;
+            color: {colors['secondary']};
         }}
 
         .prediction-box .label {{
             font-size: 14px;
-            opacity: 0.9;
+            color: #666;
         }}
 
         .confidence-box {{
             margin: 10px 0;
             padding: 10px;
-            background: rgba(255,255,255,0.2);
+            background: #ffffff;
             border-radius: 4px;
+            border: 1px solid #ddd;
         }}
 
         .metrics-row {{
