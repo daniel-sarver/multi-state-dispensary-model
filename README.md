@@ -119,11 +119,18 @@ multi-state-dispensary-model/
 
 ### Comprehensive Report Generation 📊
 - **Professional HTML reports** with embedded performance charts
-- **CSV data exports** for spreadsheet analysis
+- **Site Performance Scoring** - 1-5 scale with percentile rankings (matches PA model)
+  - 5.0: Exceptional - Top 10% of sites (≥90th percentile)
+  - 4.0: Above Average - 70th-90th percentile
+  - 3.0: Average - 30th-70th percentile
+  - 2.0: Below Average - 10th-30th percentile
+  - 1.0: Poor - Bottom 10% of sites
+- **Color-coded circular score badges** for quick visual assessment
+- **CSV data exports** for spreadsheet analysis (properly sorted by rank)
 - **Text summaries** for quick reference
 - **JSON run receipts** for tracking and auditing
 - **State-specific branding** (FL: Orange/Blue, PA: Teal/Navy)
-- **Timestamped folders** with all report formats
+- **Timestamped folders** with all report formats (v3.0)
 
 ### Production-Ready Interface 🚀
 - **User-friendly terminal CLI** with clear prompts
@@ -364,4 +371,4 @@ See [docs/README.md](docs/README.md) for complete documentation index.
 *Building on the foundation of the PA Dispensary Model v3.1 to create the next generation of dispensary site analysis tools.*
 
 **GitHub**: https://github.com/daniel-sarver/multi-state-dispensary-model
-**Last Updated**: October 28, 2025 (State-Specific Models v3.0 - Both FL and PA Now Usable for Comparative Ranking)
+**Last Updated**: October 29, 2025 (Report System v3.0 - Professional Scoring & Enhanced Guidance)

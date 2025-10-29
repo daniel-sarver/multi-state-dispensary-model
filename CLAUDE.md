@@ -22,14 +22,18 @@
 
 ### Current Status (October 2025)
 - **Status**: Production Ready ✅
-- **Model Version**: v2.0 (R² = 0.1812, 2.53x improvement)
+- **Model Version**: v3.0 (State-Specific Models)
+  - Florida: Ridge Regression (R² = 0.0685, +42.8% improvement)
+  - Pennsylvania: Random Forest (R² = 0.0756, from negative to positive!)
 - **Training Data**: 741 dispensaries across PA & FL
 - **Interface**: Complete terminal CLI with report generation and multi-site analysis
 - **Key Features**:
   - Coordinate-based input (3-4 inputs vs 23 manual features)
   - Multi-site analysis (up to 5 sites per session)
-  - Professional report generation (HTML/CSV/TXT/JSON)
+  - Professional report generation (HTML/CSV/TXT/JSON) with v3.0 scoring
+  - Site performance scoring (1-5 scale with percentile rankings)
   - State-specific branding and benchmarks
+  - Automatic state routing (zero user impact)
 
 ---
 
@@ -50,11 +54,14 @@
 - Traffic/accessibility data where available
 
 ### **Model Development**
-- Enhanced Ridge regression with state interaction terms
-- Ensemble methods testing for improved performance
+- State-specific models optimized for within-state predictions (v3.0)
+  - Florida: Ridge Regression with 31 features
+  - Pennsylvania: Random Forest with 31 features
+- Automatic state routing based on location
 - Geographic cross-validation with state-based splits
-- Confidence intervals and uncertainty quantification
+- Confidence intervals and uncertainty quantification (±75% cap)
 - Validation against Insa actual performance
+- Site performance scoring (1-5 scale) based on percentile rankings
 
 ---
 
@@ -141,6 +148,25 @@
 - Lower bounds now meaningful (12k vs 0 for 50k prediction)
 - See: `docs/SESSION_SUMMARY_2025_10_28_CI_IMPROVEMENTS.md`
 
+### **State-Specific Models v3.0** (October 28, 2025)
+- Separate models for FL and PA optimized for within-state predictions
+- Florida: Ridge Regression (R² = 0.0685, +42.8% improvement)
+- Pennsylvania: Random Forest (R² = 0.0756, from negative to positive!)
+- Automatic state routing based on location (zero user impact)
+- Both states now usable for comparative ranking
+- See: `docs/SESSION_SUMMARY_2025_10_28_STATE_SPECIFIC_V3.md`
+
+### **Report System v3.0** (October 29, 2025)
+- All reports updated to v3.0 version numbering
+- Site performance scoring (1-5 scale) matching PA model format
+  - 5.0: Exceptional (Top 10%), 4.0: Above Average (70-90th percentile)
+  - 3.0: Average (30-70th percentile), 2.0: Below Average (10-30th percentile)
+  - 1.0: Poor (Bottom 10%)
+- Color-coded circular score badges in HTML reports
+- Enhanced footer with state-specific performance metrics and guidance
+- CSV properly sorted by rank
+- See: `docs/SESSION_SUMMARY_2025_10_29_REPORT_V3_IMPROVEMENTS.md`
+
 ---
 
 ## Project Structure
@@ -193,10 +219,12 @@ multi-state-dispensary-model/
 7. ✅ Multi-Site Analysis - Up to 5 sites per session with comparison
 
 ### **System Ready For**:
-- Production use for PA & FL site analysis
-- Client presentations with professional reports
-- Multi-site comparisons and portfolio planning
-- Data export for further analysis
+- Production use for PA & FL site analysis with v3.0 state-specific models
+- Client presentations with professional reports (HTML/CSV/TXT/JSON)
+- Multi-site comparisons and portfolio planning (up to 5 sites)
+- Site performance scoring and percentile rankings (1-5 scale)
+- Data export for further analysis (CSV properly sorted)
+- Within-state comparative ranking (FL and PA both usable)
 
 ---
 
