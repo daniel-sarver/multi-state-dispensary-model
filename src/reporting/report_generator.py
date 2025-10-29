@@ -479,12 +479,12 @@ class ReportGenerator:
 
         .metric-box.population {{
             border-color: {colors['primary']};
-            background-color: rgba(4,138,129,0.1);
+            background-color: #f8f9fa;
         }}
 
         .metric-box.competition {{
             border-color: #E67E22;
-            background-color: rgba(230,126,34,0.1);
+            background-color: #f8f9fa;
         }}
 
         .metric-box h3 {{
@@ -551,13 +551,17 @@ class ReportGenerator:
                         <th>Population (5mi)</th>
                         <th>Competitors (5mi)</th>
                         <th>Square Footage</th>
-                        <th>Confidence</th>
+                        <th>Score</th>
                     </tr>
                 </thead>
                 <tbody>'''
 
         for result in results:
-            conf_level = result.get('confidence_level', 'MODERATE')
+            # Calculate score for this site
+            score_info = self._calculate_percentile_score(
+                result.get('predicted_visits', 0),
+                result.get('state', 'FL')
+            )
             # Use address if available, otherwise coordinates
             location_display = result.get('address', f"{result.get('latitude', 'N/A'):.4f}, {result.get('longitude', 'N/A'):.4f}")
             html += f'''
@@ -569,7 +573,7 @@ class ReportGenerator:
                         <td>{result.get('pop_5mi', 0):,.0f}</td>
                         <td>{result.get('competitors_5mi', 0)}</td>
                         <td>{result.get('sq_ft', 0):,.0f}</td>
-                        <td><span class="confidence-indicator {conf_level.lower()}">{conf_level}</span></td>
+                        <td style="text-align: center; font-weight: bold; color: {score_info['color']};">{score_info['score']:.1f}/5</td>
                     </tr>'''
 
         html += '''
