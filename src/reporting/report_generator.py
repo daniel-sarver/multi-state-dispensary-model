@@ -879,6 +879,10 @@ class ReportGenerator:
             csv_data.append(row)
 
         df = pd.DataFrame(csv_data)
+
+        # Sort by rank to ensure rank 1 is first row
+        df = df.sort_values('rank')
+
         csv_path = output_dir / "analysis_results.csv"
         df.to_csv(csv_path, index=False)
 
