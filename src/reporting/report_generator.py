@@ -102,7 +102,7 @@ class ReportGenerator:
     def _create_output_folder(self) -> Path:
         """Create timestamped output folder."""
         timestamp_str = self.timestamp.strftime("%Y%m%d_%H%M%S")
-        output_dir = Path("site_reports") / f"Site_Analysis_v2_0_{timestamp_str}"
+        output_dir = Path("site_reports") / f"Site_Analysis_v3_0_{timestamp_str}"
         output_dir.mkdir(parents=True, exist_ok=True)
         return output_dir
 
@@ -181,7 +181,7 @@ class ReportGenerator:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multi-State Dispensary Site Analysis Report v2.0</title>
+    <title>Multi-State Dispensary Site Analysis Report v3.0</title>
     <style>
         {self._get_css_styles(colors)}
     </style>
@@ -190,7 +190,7 @@ class ReportGenerator:
     <div class="container">
         <div class="header">
             <h1>Multi-State Dispensary Site Analysis Report</h1>
-            <div class="subtitle">Model v2.0 • Analysis Date: {timestamp_str}</div>
+            <div class="subtitle">Model v3.0 • Analysis Date: {timestamp_str}</div>
             <div class="subtitle">Primary State: {primary_state}</div>
         </div>
 
@@ -233,13 +233,42 @@ class ReportGenerator:
         html += f'''
 
         <div class="footer">
-            <p><strong>Multi-State Dispensary Visit Model v2.0:</strong>
-               Test R² = {self.model_info['test_r2']:.4f},
-               Cross-Val R² = {self.model_info['cv_r2_mean']:.4f} ± {self.model_info['cv_r2_std']:.4f}</p>
-            <p><strong>Training Data:</strong> {self.model_info.get('n_training_samples', 'N/A')} dispensaries
-               across Florida and Pennsylvania</p>
-            <p><strong>Model Type:</strong> Ridge Regression with state-specific factors and interaction terms</p>
-            <p>Report generated: {timestamp_str}</p>
+            <h3 style="text-align: left; color: #333; margin-bottom: 15px; font-size: 1.1em;">Performance Score Key</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; margin-bottom: 30px; text-align: left;">
+                <div style="padding: 8px; background: #27AE6015; border-left: 3px solid #27AE60;">
+                    <strong style="color: #27AE60;">A+ / A</strong> - Elite / Excellent (≥90th percentile)
+                </div>
+                <div style="padding: 8px; background: #3498DB15; border-left: 3px solid #3498DB;">
+                    <strong style="color: #3498DB;">B+ / B</strong> - Very Good / Good (70-89th percentile)
+                </div>
+                <div style="padding: 8px; background: #F39C1215; border-left: 3px solid #F39C12;">
+                    <strong style="color: #F39C12;">C+ / C / C-</strong> - Above Avg / Average / Below Avg (40-69th percentile)
+                </div>
+                <div style="padding: 8px; background: #E74C3C15; border-left: 3px solid #E74C3C;">
+                    <strong style="color: #E74C3C;">D+ / D / D-</strong> - Low / Very Low / Poor (&lt;40th percentile)
+                </div>
+            </div>
+            <p style="font-size: 0.9em; color: #666; margin-bottom: 20px;"><em>Note: Scores compare predicted performance against all dispensaries in the same state (FL: 590, PA: 151).</em></p>
+
+            <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+
+            <p><strong>Multi-State Dispensary Prediction Model v3.0 - Model Performance:</strong></p>
+
+            <p><strong>Florida (Ridge Regression)</strong><br>
+            • Within-state R² = 0.0685 (explains 6.85% of variance within Florida)<br>
+            • Best use: Comparative ranking of FL sites<br>
+            • Typical prediction variance: ±40-50%</p>
+
+            <p><strong>Pennsylvania (Random Forest)</strong><br>
+            • Within-state R² = 0.0756 (explains 7.56% of variance within Pennsylvania)<br>
+            • Best use: Comparative ranking of PA sites<br>
+            • Typical prediction variance: ±40-50%</p>
+
+            <p><strong>Important:</strong> This model is a comparative ranking tool, not a precision forecasting instrument.
+            Best used to rank 5-10 candidate sites within the same state and focus due diligence on top performers.
+            Predictions should be combined with site visits, local market intelligence, and strategic analysis.</p>
+
+            <p><strong>Training Data:</strong> 741 dispensaries (FL: 590, PA: 151) • <strong>Report Generated:</strong> {timestamp_str}</p>
         </div>
     </div>
 </body>
@@ -565,6 +594,12 @@ class ReportGenerator:
             conf_level = "LOW"
             conf_class = "low"
 
+        # Calculate percentile score
+        score_info = self._calculate_percentile_score(
+            result.get('predicted_visits', 0),
+            result.get('state', 'FL')
+        )
+
         # Build site title with address if available
         site_title = f"Site {result['rank']}"
         if result.get('address'):
@@ -582,6 +617,18 @@ class ReportGenerator:
                 <div class="prediction-box">
                     <div class="label">Predicted Annual Visits</div>
                     <div class="visits">{result.get('predicted_visits', 0):,.0f}</div>
+
+                    <div style="margin: 15px 0; padding: 15px; background: {score_info['color']}15; border-left: 4px solid {score_info['color']}; border-radius: 4px;">
+                        <div style="font-size: 0.9em; color: #666; margin-bottom: 5px;">Site Performance Score</div>
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <div style="font-size: 2em; font-weight: bold; color: {score_info['color']};">{score_info['grade']}</div>
+                            <div>
+                                <div style="font-weight: 600; color: {score_info['color']};">{score_info['description']}</div>
+                                <div style="font-size: 0.9em; color: #666;">{score_info['percentile']}th percentile in {result.get('state', 'N/A')}</div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="confidence-box">
                         <div class="label">95% Confidence Interval</div>
                         <div>{result.get('ci_lower', 0):,.0f} - {result.get('ci_upper', 0):,.0f} visits</div>'''
@@ -842,13 +889,12 @@ class ReportGenerator:
         timestamp_str = self.timestamp.strftime("%B %d, %Y at %I:%M %p")
 
         lines = [
-            "MULTI-STATE DISPENSARY VISIT MODEL v2.0 - ANALYSIS REPORT",
+            "MULTI-STATE DISPENSARY PREDICTION MODEL v3.0 - ANALYSIS REPORT",
             "=" * 70,
             f"Analysis Date: {timestamp_str}",
-            f"Model Version: v2.0",
+            f"Model Version: v3.0 (State-Specific Models)",
             f"Sites Analyzed: {len(results)}",
-            f"Test R²: {self.model_info['test_r2']:.4f}",
-            f"Cross-Val R²: {self.model_info['cv_r2_mean']:.4f} ± {self.model_info['cv_r2_std']:.4f}",
+            f"FL Within-State R²: 0.0685 | PA Within-State R²: 0.0756",
             "",
             "INDIVIDUAL SITE RESULTS",
             "-" * 70
@@ -888,12 +934,11 @@ class ReportGenerator:
         """Generate JSON run receipt with metadata."""
         receipt_data = {
             'analysis_timestamp': self.timestamp.isoformat(),
-            'model_version': 'v2.0',
-            'model_type': 'Multi-State Ridge Regression',
+            'model_version': 'v3.0',
+            'model_type': 'State-Specific Models (FL: Ridge, PA: Random Forest)',
             'sites_analyzed': len(results),
-            'test_r2': self.model_info['test_r2'],
-            'cv_r2_mean': self.model_info['cv_r2_mean'],
-            'cv_r2_std': self.model_info['cv_r2_std'],
+            'fl_within_state_r2': 0.0685,
+            'pa_within_state_r2': 0.0756,
             'states_covered': list(set(r.get('state', 'N/A') for r in results))
         }
 
@@ -957,3 +1002,86 @@ class ReportGenerator:
     def _get_state_benchmarks(self, state: str) -> Dict[str, Any]:
         """Get market benchmarks for state from calculated values."""
         return self.state_benchmarks.get(state, self.state_benchmarks['FL'])
+
+    def _calculate_percentile_score(self, predicted_visits: float, state: str) -> Dict[str, Any]:
+        """
+        Calculate percentile and grade for a site based on predicted visits.
+
+        Args:
+            predicted_visits: Predicted annual visits for the site
+            state: State code (FL or PA)
+
+        Returns:
+            Dict with percentile, grade, and description
+        """
+        try:
+            # Load training data
+            from pathlib import Path
+            project_root = Path(__file__).parent.parent.parent
+            training_file = project_root / "data" / "processed" / "combined_with_competitive_features_corrected.csv"
+
+            df = pd.read_csv(training_file)
+
+            # Filter to training dispensaries in the same state
+            training = df[(df['has_placer_data'] == True) & (df['state'] == state)]['corrected_visits']
+
+            # Calculate percentile (what percent of sites have lower visits than this prediction)
+            percentile = (training < predicted_visits).sum() / len(training) * 100
+
+            # Assign grade based on percentile
+            if percentile >= 95:
+                grade = "A+"
+                description = "Elite Site"
+                color = "#27AE60"  # Green
+            elif percentile >= 90:
+                grade = "A"
+                description = "Excellent Site"
+                color = "#27AE60"
+            elif percentile >= 80:
+                grade = "B+"
+                description = "Very Good Site"
+                color = "#3498DB"  # Blue
+            elif percentile >= 70:
+                grade = "B"
+                description = "Good Site"
+                color = "#3498DB"
+            elif percentile >= 60:
+                grade = "C+"
+                description = "Above Average Site"
+                color = "#F39C12"  # Orange
+            elif percentile >= 50:
+                grade = "C"
+                description = "Average Site"
+                color = "#F39C12"
+            elif percentile >= 40:
+                grade = "C-"
+                description = "Below Average Site"
+                color = "#E67E22"  # Dark Orange
+            elif percentile >= 30:
+                grade = "D+"
+                description = "Low Performing Site"
+                color = "#E74C3C"  # Red
+            elif percentile >= 20:
+                grade = "D"
+                description = "Very Low Performing Site"
+                color = "#E74C3C"
+            else:
+                grade = "D-"
+                description = "Poor Performing Site"
+                color = "#C0392B"  # Dark Red
+
+            return {
+                'percentile': round(percentile, 1),
+                'grade': grade,
+                'description': description,
+                'color': color
+            }
+
+        except Exception as e:
+            print(f"⚠️  Warning: Could not calculate percentile score ({e})")
+            return {
+                'percentile': None,
+                'grade': "N/A",
+                'description': "Score unavailable",
+                'color': "#95A5A6"
+            }

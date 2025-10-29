@@ -100,7 +100,7 @@ class TerminalInterface:
         print("=" * 70)
         print("MULTI-STATE DISPENSARY PREDICTION MODEL".center(70))
         print("=" * 70)
-        print(f"Model Version:    {info.get('model_version', 'v2.0')}")
+        print(f"Model Version:    v3.0")
         print(f"Training Date:    {info['training_date'][:10]}")
         print(f"Target:           {info.get('target_column', 'corrected_visits')} (Annual)")
         print(f"Test R²:          {info['test_r2']:.4f}")
