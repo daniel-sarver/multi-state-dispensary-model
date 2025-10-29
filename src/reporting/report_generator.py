@@ -920,7 +920,7 @@ class ReportGenerator:
         lines.extend([
             "",
             "=" * 70,
-            "Multi-State Dispensary Visit Model v2.0",
+            "Multi-State Dispensary Prediction Model v3.0",
             "© 2025 INSA Analytics"
         ])
 
