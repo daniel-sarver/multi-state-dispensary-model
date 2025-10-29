@@ -234,18 +234,21 @@ class ReportGenerator:
 
         <div class="footer">
             <h3 style="text-align: left; color: #333; margin-bottom: 15px; font-size: 1.1em;">Performance Score Key</h3>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; margin-bottom: 30px; text-align: left;">
-                <div style="padding: 8px; background: #27AE6015; border-left: 3px solid #27AE60;">
-                    <strong style="color: #27AE60;">A+ / A</strong> - Elite / Excellent (≥90th percentile)
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 20px; text-align: left;">
+                <div style="padding: 10px; background: #27AE6015; border-left: 4px solid #27AE60;">
+                    <strong style="color: #27AE60; font-size: 1.1em;">5.0</strong> - Exceptional - Top 10% of sites
                 </div>
-                <div style="padding: 8px; background: #3498DB15; border-left: 3px solid #3498DB;">
-                    <strong style="color: #3498DB;">B+ / B</strong> - Very Good / Good (70-89th percentile)
+                <div style="padding: 10px; background: #048A8115; border-left: 4px solid #048A81;">
+                    <strong style="color: #048A81; font-size: 1.1em;">4.0</strong> - Above Average - 70th-90th percentile
                 </div>
-                <div style="padding: 8px; background: #F39C1215; border-left: 3px solid #F39C12;">
-                    <strong style="color: #F39C12;">C+ / C / C-</strong> - Above Avg / Average / Below Avg (40-69th percentile)
+                <div style="padding: 10px; background: #F39C1215; border-left: 4px solid #F39C12;">
+                    <strong style="color: #F39C12; font-size: 1.1em;">3.0</strong> - Average - 30th-70th percentile
                 </div>
-                <div style="padding: 8px; background: #E74C3C15; border-left: 3px solid #E74C3C;">
-                    <strong style="color: #E74C3C;">D+ / D / D-</strong> - Low / Very Low / Poor (&lt;40th percentile)
+                <div style="padding: 10px; background: #E67E2215; border-left: 4px solid #E67E22;">
+                    <strong style="color: #E67E22; font-size: 1.1em;">2.0</strong> - Below Average - 10th-30th percentile
+                </div>
+                <div style="padding: 10px; background: #E74C3C15; border-left: 4px solid #E74C3C;">
+                    <strong style="color: #E74C3C; font-size: 1.1em;">1.0</strong> - Poor - Bottom 10% of sites
                 </div>
             </div>
             <p style="font-size: 0.9em; color: #666; margin-bottom: 20px;"><em>Note: Scores compare predicted performance against all dispensaries in the same state (FL: 590, PA: 151).</em></p>
@@ -618,14 +621,15 @@ class ReportGenerator:
                     <div class="label">Predicted Annual Visits</div>
                     <div class="visits">{result.get('predicted_visits', 0):,.0f}</div>
 
-                    <div style="margin: 15px 0; padding: 15px; background: {score_info['color']}15; border-left: 4px solid {score_info['color']}; border-radius: 4px;">
-                        <div style="font-size: 0.9em; color: #666; margin-bottom: 5px;">Site Performance Score</div>
-                        <div style="display: flex; align-items: center; gap: 15px;">
-                            <div style="font-size: 2em; font-weight: bold; color: {score_info['color']};">{score_info['grade']}</div>
-                            <div>
-                                <div style="font-weight: 600; color: {score_info['color']};">{score_info['description']}</div>
-                                <div style="font-size: 0.9em; color: #666;">{score_info['percentile']}th percentile in {result.get('state', 'N/A')}</div>
-                            </div>
+                    <div style="display: flex; align-items: center; margin: 20px 0; gap: 30px;">
+                        <div style="width: 120px; height: 120px; border-radius: 50%; border: 6px solid {score_info['color']}; background-color: {score_info['color']}15; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            <div style="font-size: 24px; font-weight: bold; color: {score_info['color']};">{score_info['score']:.1f}/5</div>
+                        </div>
+                        <div style="flex: 1;">
+                            <h2 style="margin: 0 0 8px 0; font-size: 1.3em; color: #2E4057;">Site Performance Score</h2>
+                            <div style="font-weight: 600; color: {score_info['color']}; margin-bottom: 4px;">{score_info['description']}</div>
+                            <div style="font-size: 0.95em; color: #666;">Market Percentile: {score_info['percentile']}%</div>
+                            <div style="font-size: 0.95em; color: #666; margin-top: 4px;">Predicted Annual Visits: {result.get('predicted_visits', 0):,.0f}</div>
                         </div>
                     </div>
 
@@ -1028,51 +1032,31 @@ class ReportGenerator:
             # Calculate percentile (what percent of sites have lower visits than this prediction)
             percentile = (training < predicted_visits).sum() / len(training) * 100
 
-            # Assign grade based on percentile
-            if percentile >= 95:
-                grade = "A+"
-                description = "Elite Site"
+            # Assign score based on percentile (1-5 scale like PA model)
+            if percentile >= 90:
+                score = 5.0
+                description = "Exceptional - Top 10% of sites"
                 color = "#27AE60"  # Green
-            elif percentile >= 90:
-                grade = "A"
-                description = "Excellent Site"
-                color = "#27AE60"
-            elif percentile >= 80:
-                grade = "B+"
-                description = "Very Good Site"
-                color = "#3498DB"  # Blue
             elif percentile >= 70:
-                grade = "B"
-                description = "Good Site"
-                color = "#3498DB"
-            elif percentile >= 60:
-                grade = "C+"
-                description = "Above Average Site"
-                color = "#F39C12"  # Orange
-            elif percentile >= 50:
-                grade = "C"
-                description = "Average Site"
-                color = "#F39C12"
-            elif percentile >= 40:
-                grade = "C-"
-                description = "Below Average Site"
-                color = "#E67E22"  # Dark Orange
+                score = 4.0
+                description = "Above Average - 70th-90th percentile"
+                color = "#048A81"  # Teal
             elif percentile >= 30:
-                grade = "D+"
-                description = "Low Performing Site"
-                color = "#E74C3C"  # Red
-            elif percentile >= 20:
-                grade = "D"
-                description = "Very Low Performing Site"
-                color = "#E74C3C"
+                score = 3.0
+                description = "Average - 30th-70th percentile"
+                color = "#F39C12"  # Orange
+            elif percentile >= 10:
+                score = 2.0
+                description = "Below Average - 10th-30th percentile"
+                color = "#E67E22"  # Dark Orange
             else:
-                grade = "D-"
-                description = "Poor Performing Site"
-                color = "#C0392B"  # Dark Red
+                score = 1.0
+                description = "Poor - Bottom 10% of sites"
+                color = "#E74C3C"  # Red
 
             return {
                 'percentile': round(percentile, 1),
-                'grade': grade,
+                'score': score,
                 'description': description,
                 'color': color
             }
@@ -1081,7 +1065,7 @@ class ReportGenerator:
             print(f"⚠️  Warning: Could not calculate percentile score ({e})")
             return {
                 'percentile': None,
-                'grade': "N/A",
+                'score': 0.0,
                 'description': "Score unavailable",
                 'color': "#95A5A6"
             }
